@@ -15,6 +15,8 @@ export interface Tenant {
   email: string | null
   telefono: string | null
   logo_url: string | null
+  foto_portada: string | null
+  descripcion: string | null
   moneda: string
   activa: boolean
   created_at: string

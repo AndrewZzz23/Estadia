@@ -15,6 +15,8 @@ CREATE TABLE tenants (
   email          TEXT,                             -- contacto del dueño
   telefono       TEXT,                             -- teléfono del dueño
   logo_url       TEXT,                             -- logo del negocio
+  foto_portada   TEXT,                             -- imagen/video hero de la página pública
+  descripcion    TEXT,                             -- texto de presentación del negocio
   moneda         TEXT NOT NULL DEFAULT 'COP',      -- moneda de precios
   activa         BOOLEAN NOT NULL DEFAULT true,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
