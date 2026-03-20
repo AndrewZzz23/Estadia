@@ -30,8 +30,10 @@ ALTER TABLE propiedades ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "publico ve propiedades activas" ON propiedades
   FOR SELECT USING (activa = true);
 
-CREATE POLICY "admin gestiona propiedades" ON propiedades
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "admin full access" ON propiedades
+  FOR ALL TO anon
+  USING (true)
+  WITH CHECK (true);
 
 -- ────────────────────────────────────────────────────────────
 -- FOTOS_PROPIEDADES
@@ -73,11 +75,56 @@ CREATE POLICY "admin gestiona bloqueos" ON bloqueos
 -- ────────────────────────────────────────────────────────────
 -- STORAGE: bucket fotos-propiedades
 -- ────────────────────────────────────────────────────────────
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('fotos-propiedades', 'fotos-propiedades', true)
+ON CONFLICT (id) DO NOTHING;
+
 CREATE POLICY "subir fotos" ON storage.objects
-  FOR INSERT WITH CHECK (bucket_id = 'fotos-propiedades');
+  FOR INSERT TO anon WITH CHECK (bucket_id = 'fotos-propiedades');
 
 CREATE POLICY "ver fotos" ON storage.objects
-  FOR SELECT USING (bucket_id = 'fotos-propiedades');
+  FOR SELECT TO anon USING (bucket_id = 'fotos-propiedades');
+
+CREATE POLICY "actualizar fotos" ON storage.objects
+  FOR UPDATE TO anon USING (bucket_id = 'fotos-propiedades');
 
 CREATE POLICY "eliminar fotos" ON storage.objects
-  FOR DELETE USING (bucket_id = 'fotos-propiedades');
+  FOR DELETE TO anon USING (bucket_id = 'fotos-propiedades');
+
+-- ────────────────────────────────────────────────────────────
+-- STORAGE: bucket logos (logo del negocio, máx 2 MB)
+-- ────────────────────────────────────────────────────────────
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('logos', 'logos', true, NULL, NULL)
+ON CONFLICT (id) DO UPDATE SET file_size_limit = NULL, allowed_mime_types = NULL;
+
+CREATE POLICY "logos upload" ON storage.objects
+  FOR INSERT TO anon WITH CHECK (bucket_id = 'logos');
+
+CREATE POLICY "logos select" ON storage.objects
+  FOR SELECT TO anon USING (bucket_id = 'logos');
+
+CREATE POLICY "logos update" ON storage.objects
+  FOR UPDATE TO anon USING (bucket_id = 'logos');
+
+CREATE POLICY "logos delete" ON storage.objects
+  FOR DELETE TO anon USING (bucket_id = 'logos');
+
+-- ────────────────────────────────────────────────────────────
+-- STORAGE: bucket portadas (imagen/video hero de empresa)
+-- ────────────────────────────────────────────────────────────
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('portadas', 'portadas', true, 209715200, NULL)  -- 200 MB, acepta imágenes y videos
+ON CONFLICT (id) DO UPDATE SET file_size_limit = 209715200, allowed_mime_types = NULL;
+
+CREATE POLICY "portadas upload" ON storage.objects
+  FOR INSERT TO anon WITH CHECK (bucket_id = 'portadas');
+
+CREATE POLICY "portadas select" ON storage.objects
+  FOR SELECT TO anon USING (bucket_id = 'portadas');
+
+CREATE POLICY "portadas update" ON storage.objects
+  FOR UPDATE TO anon USING (bucket_id = 'portadas');
+
+CREATE POLICY "portadas delete" ON storage.objects
+  FOR DELETE TO anon USING (bucket_id = 'portadas');

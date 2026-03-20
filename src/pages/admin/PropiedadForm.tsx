@@ -5,6 +5,9 @@ import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
 import type { Propiedad } from '../../types/database'
 import GaleriaFotos from '../../components/admin/GaleriaFotos'
+import MapPicker from '../../components/admin/MapPicker'
+import type { LucideIcon } from 'lucide-react'
+import { Wifi, Waves, Flame, Car, Wind, ChefHat, Shirt, Tv, Bath, Eye, Sun, Leaf, PawPrint, Sparkles } from 'lucide-react'
 
 const AMENIDADES_OPCIONES = [
   'WiFi', 'Piscina', 'BBQ', 'Parqueadero', 'Aire acondicionado',
@@ -12,10 +15,29 @@ const AMENIDADES_OPCIONES = [
   'Vista al mar', 'Terraza', 'Jardín', 'Mascotas permitidas',
 ]
 
+const AMENIDADES_ICONOS: Record<string, LucideIcon> = {
+  'WiFi':               Wifi,
+  'Piscina':            Waves,
+  'BBQ':                Flame,
+  'Parqueadero':        Car,
+  'Aire acondicionado': Wind,
+  'Cocina equipada':    ChefHat,
+  'Lavadora':           Shirt,
+  'TV':                 Tv,
+  'Chimenea':           Sparkles,
+  'Jacuzzi':            Bath,
+  'Vista al mar':       Eye,
+  'Terraza':            Sun,
+  'Jardín':             Leaf,
+  'Mascotas permitidas':PawPrint,
+}
+
 type FormData = {
   nombre: string
   descripcion: string
   ubicacion: string
+  latitud: number | null
+  longitud: number | null
   precio_noche: string
   precio_semana: string
   precio_mes: string
@@ -28,7 +50,7 @@ type FormData = {
 }
 
 const EMPTY: FormData = {
-  nombre: '', descripcion: '', ubicacion: '',
+  nombre: '', descripcion: '', ubicacion: '', latitud: null, longitud: null,
   precio_noche: '', precio_semana: '', precio_mes: '',
   capacidad: '', habitaciones: '', banos: '',
   whatsapp: '', amenidades: [], activa: true,
@@ -55,6 +77,8 @@ export default function PropiedadForm() {
           nombre:       p.nombre,
           descripcion:  p.descripcion ?? '',
           ubicacion:    p.ubicacion ?? '',
+          latitud:      p.latitud ?? null,
+          longitud:     p.longitud ?? null,
           precio_noche: p.precio_noche?.toString() ?? '',
           precio_semana:p.precio_semana?.toString() ?? '',
           precio_mes:   p.precio_mes?.toString() ?? '',
@@ -101,6 +125,8 @@ export default function PropiedadForm() {
       nombre:       form.nombre.trim(),
       descripcion:  form.descripcion.trim() || null,
       ubicacion:    form.ubicacion.trim() || null,
+      latitud:      form.latitud,
+      longitud:     form.longitud,
       precio_noche: numOrNull(form.precio_noche),
       precio_semana:numOrNull(form.precio_semana),
       precio_mes:   numOrNull(form.precio_mes),
@@ -147,8 +173,12 @@ export default function PropiedadForm() {
           </Field>
 
           <Field label="Ubicación">
-            <input value={form.ubicacion} onChange={(e: ChangeEvent<HTMLInputElement>) => set('ubicacion', e.target.value)}
-              className={input()} placeholder="Guatapé, Antioquia" />
+            <MapPicker
+              lat={form.latitud}
+              lng={form.longitud}
+              ubicacion={form.ubicacion}
+              onChange={(lat, lng, ubicacion) => setForm(prev => ({ ...prev, latitud: lat, longitud: lng, ubicacion }))}
+            />
           </Field>
 
           <Field label="WhatsApp">
@@ -199,18 +229,22 @@ export default function PropiedadForm() {
         <section className="bg-white border border-gray-100 rounded-xl p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-3">Amenidades</h2>
           <div className="flex flex-wrap gap-2">
-            {AMENIDADES_OPCIONES.map(a => (
-              <button
-                key={a} type="button" onClick={() => toggleAmenidad(a)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                  form.amenidades.includes(a)
-                    ? 'bg-brand-500 border-brand-500 text-white'
-                    : 'border-gray-200 text-gray-600 hover:border-brand-300'
-                }`}
-              >
-                {a}
-              </button>
-            ))}
+            {AMENIDADES_OPCIONES.map(a => {
+              const Icon = AMENIDADES_ICONOS[a]
+              return (
+                <button
+                  key={a} type="button" onClick={() => toggleAmenidad(a)}
+                  className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                    form.amenidades.includes(a)
+                      ? 'bg-brand-500 border-brand-500 text-white'
+                      : 'border-gray-200 text-gray-600 hover:border-brand-300'
+                  }`}
+                >
+                  {Icon && <Icon size={12} />}
+                  {a}
+                </button>
+              )
+            })}
           </div>
         </section>
 

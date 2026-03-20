@@ -4,9 +4,30 @@ import { supabase } from '../../lib/supabase'
 import type { Bloqueo, FotoPropiedad, PropiedadConFotos, Reserva, Tenant } from '../../types/database'
 import {
   MapPin, Users, BedDouble, Bath, MessageCircle, ArrowLeft,
-  ChevronLeft, ChevronRight, X, Check, Wifi,
+  ChevronLeft, ChevronRight, X, Check,
+  Wifi, Waves, Flame, Car, Wind, ChefHat, Shirt, Tv, Eye, Sun, Leaf, PawPrint, Sparkles,
 } from 'lucide-react'
 import { getFestivos } from '../../lib/festivos'
+import WhatsAppIcon from '../../components/WhatsAppIcon'
+import { waGlassStyle } from '../../lib/styles'
+import type { LucideIcon } from 'lucide-react'
+
+const AMENIDADES_ICONOS: Record<string, LucideIcon> = {
+  'WiFi':               Wifi,
+  'Piscina':            Waves,
+  'BBQ':                Flame,
+  'Parqueadero':        Car,
+  'Aire acondicionado': Wind,
+  'Cocina equipada':    ChefHat,
+  'Lavadora':           Shirt,
+  'TV':                 Tv,
+  'Chimenea':           Sparkles,
+  'Jacuzzi':            Bath,
+  'Vista al mar':       Eye,
+  'Terraza':            Sun,
+  'Jardín':             Leaf,
+  'Mascotas permitidas':PawPrint,
+}
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DIAS  = ['D','L','M','M','J','V','S']
@@ -122,7 +143,7 @@ export default function PropiedadDetalle() {
   const festivos = getFestivos(calYear)
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#E8E4DE]">
 
       {/* ── HEADER ── */}
       <header className={`fixed top-0 left-0 right-0 z-30 transition-all duration-300 ${
@@ -214,7 +235,7 @@ export default function PropiedadDetalle() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
 
           {/* Columna principal */}
-          <div className="lg:col-span-2 space-y-10">
+          <div className="lg:col-span-2 space-y-10 bg-white rounded-3xl p-8">
 
             {/* Info si no hay fotos */}
             {fotos.length === 0 && (
@@ -269,7 +290,7 @@ export default function PropiedadDetalle() {
             {p.descripcion && (
               <div>
                 <h2 className="text-xl font-bold text-[#1E3E50] mb-4">Acerca de este espacio</h2>
-                <p className="text-gray-600 leading-relaxed text-base">{p.descripcion}</p>
+                <p className="text-gray-600 leading-relaxed text-base whitespace-pre-wrap">{p.descripcion}</p>
               </div>
             )}
 
@@ -278,38 +299,78 @@ export default function PropiedadDetalle() {
               <div>
                 <h2 className="text-xl font-bold text-[#1E3E50] mb-5">Comodidades</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {(p.amenidades as string[]).map(a => (
-                    <div key={a} className="flex items-center gap-2.5 text-sm text-gray-700 bg-gray-50 rounded-xl px-3 py-2.5">
-                      <Check size={14} className="text-[#2A7A68] flex-shrink-0" />
-                      {a}
-                    </div>
-                  ))}
+                  {(p.amenidades as string[]).map(a => {
+                    const Icon = AMENIDADES_ICONOS[a] ?? Check
+                    return (
+                      <div key={a} className="flex items-center gap-2.5 text-sm text-gray-700 bg-gray-50 rounded-xl px-3 py-2.5">
+                        <Icon size={15} className="text-[#2A7A68] flex-shrink-0" />
+                        {a}
+                      </div>
+                    )
+                  })}
                 </div>
+              </div>
+            )}
+
+            {/* Mapa */}
+            {p.latitud && p.longitud && (
+              <div>
+                <h2 className="text-xl font-bold text-[#1E3E50] mb-4">Dónde se ubica</h2>
+                <div className="rounded-2xl overflow-hidden border border-gray-100">
+                  <iframe
+                    title="Ubicación"
+                    src={`https://maps.google.com/maps?q=${p.latitud},${p.longitud}&z=15&t=k&output=embed`}
+                    className="w-full"
+                    style={{ height: 320, border: 'none' }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+                <a
+                  href={`https://www.google.com/maps?q=${p.latitud},${p.longitud}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 mt-2 text-xs font-medium text-[#2A7A68] hover:underline"
+                >
+                  <MapPin size={12} />
+                  Abrir en Google Maps
+                </a>
               </div>
             )}
 
             {/* Calendario */}
             <div>
-              <h2 className="text-xl font-bold text-[#1E3E50] mb-6">Disponibilidad</h2>
+              <h2 className="text-xl font-bold text-[#1E3E50] mb-4">Disponibilidad</h2>
 
-              <div className="bg-gray-50 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-5">
-                  <button onClick={() => navCal(-1)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white border border-gray-200 transition-colors">
-                    <ChevronLeft size={16} className="text-gray-500" />
-                  </button>
-                  <span className="font-semibold text-gray-800">{MESES[calMonth]} {calYear}</span>
-                  <button onClick={() => navCal(1)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white border border-gray-200 transition-colors">
-                    <ChevronRight size={16} className="text-gray-500" />
-                  </button>
+              <div className="rounded-3xl overflow-hidden bg-white border border-gray-100" style={{ boxShadow: '6px 12px 32px rgba(0,0,0,0.18), 2px 4px 8px rgba(0,0,0,0.1)' }}>
+
+                {/* Header */}
+                <div className="px-6 pt-6 pb-4 border-b border-gray-100 bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <button onClick={() => navCal(-1)}
+                      className="w-9 h-9 flex items-center justify-center rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">
+                      <ChevronLeft size={16} />
+                    </button>
+                    <div className="text-center">
+                      <p className="text-[#1E3E50] font-bold text-lg leading-tight">{MESES[calMonth]}</p>
+                      <p className="text-gray-400 text-xs">{calYear}</p>
+                    </div>
+                    <button onClick={() => navCal(1)}
+                      className="w-9 h-9 flex items-center justify-center rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-7 mb-2">
+                {/* Días de la semana */}
+                <div className="grid grid-cols-7 px-4 pt-4 mb-1">
                   {DIAS.map((d, i) => (
-                    <div key={i} className="text-xs font-medium text-gray-400 text-center py-1">{d}</div>
+                    <div key={i} className="text-xs font-semibold text-gray-300 text-center py-1 tracking-widest uppercase">{d}</div>
                   ))}
                 </div>
 
-                <div className="grid grid-cols-7 gap-1">
+                {/* Celdas */}
+                <div className="grid grid-cols-7 gap-0.5 px-4 pb-5">
                   {dias.map((dia, i) => {
                     const d       = ymd(dia)
                     const esMes   = dia.getMonth() === calMonth
@@ -317,37 +378,43 @@ export default function PropiedadDetalle() {
                     const pasado  = d < hoyStr
                     const ocupado = ocupados.has(d)
                     const festivo = festivos.get(d)
+                    const esDom   = dia.getDay() === 0
 
                     return (
                       <div key={i} title={festivo}
-                        className={`h-9 flex items-center justify-center rounded-xl text-xs transition-colors
+                        className={`h-10 flex items-center justify-center rounded-xl text-xs font-medium transition-all
                           ${!esMes ? 'opacity-20' : ''}
-                          ${ocupado ? 'bg-red-100 text-red-500 line-through' : ''}
-                          ${festivo && !ocupado ? 'bg-amber-100 text-amber-700 font-semibold' : ''}
-                          ${pasado && !esHoy && !festivo && !ocupado ? 'text-gray-300' : ''}
-                          ${!ocupado && !pasado && !esHoy && !festivo && esMes ? 'text-gray-700 hover:bg-white' : ''}`}>
+                          ${ocupado && esMes ? 'bg-red-100 text-red-500 font-semibold' : ''}
+                          ${festivo && !ocupado && esMes ? 'bg-amber-100 text-amber-500 font-bold' : ''}
+                          ${pasado && !esHoy && !ocupado && !festivo && esMes ? 'text-gray-300' : ''}
+                          ${!ocupado && !pasado && !esHoy && !festivo && esMes ? `${esDom ? 'text-red-400' : 'text-gray-700'} hover:bg-[#2A7A68]/10 hover:text-[#2A7A68]` : ''}
+                        `}>
                         {esHoy ? (
-                          <span className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2A7A68] text-white font-bold text-xs">
+                          <span className="w-8 h-8 flex items-center justify-center rounded-full text-white font-bold text-xs"
+                            style={{ background: 'linear-gradient(135deg, #2A7A68, #1fa085)', boxShadow: '0 4px 10px rgba(42,122,104,0.35)' }}>
                             {dia.getDate()}
                           </span>
+                        ) : ocupado && esMes ? (
+                          <span className="line-through opacity-50">{dia.getDate()}</span>
                         ) : dia.getDate()}
                       </div>
                     )
                   })}
                 </div>
 
-                <div className="flex gap-5 mt-5 text-xs flex-wrap">
-                  <div className="flex items-center gap-1.5 text-red-500">
-                    <span className="w-3 h-3 rounded bg-red-100 border border-red-300 inline-block" />
-                    Ocupado
+                {/* Leyenda */}
+                <div className="flex gap-4 px-6 py-3 border-t border-gray-100 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full inline-block bg-[#2A7A68]" />
+                    <span className="text-gray-400 text-xs">Hoy</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-amber-700">
-                    <span className="w-3 h-3 rounded bg-amber-100 inline-block" />
-                    Festivo
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-md bg-red-300 inline-block" />
+                    <span className="text-gray-400 text-xs">Ocupado</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-[#2A7A68]">
-                    <span className="w-3 h-3 rounded-full bg-[#2A7A68] inline-block" />
-                    Hoy
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-md bg-amber-300 inline-block" />
+                    <span className="text-gray-400 text-xs">Festivo</span>
                   </div>
                 </div>
               </div>
@@ -357,7 +424,7 @@ export default function PropiedadDetalle() {
             {t.descripcion && (
               <div className="border-t border-gray-100 pt-10">
                 <h2 className="text-xl font-bold text-[#1E3E50] mb-4">Sobre {t.nombre}</h2>
-                <p className="text-gray-600 leading-relaxed">{t.descripcion}</p>
+                <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{t.descripcion}</p>
                 {t.telefono && (
                   <a
                     href={`https://wa.me/${t.telefono.replace(/\D/g,'')}?text=${encodeURIComponent('Hola, tengo una consulta.')}`}
@@ -375,7 +442,7 @@ export default function PropiedadDetalle() {
           {/* ── SIDEBAR ── */}
           <div>
             <div className="sticky top-20 space-y-4">
-              <div className="border border-gray-200 rounded-3xl p-6 shadow-xl shadow-gray-100">
+              <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-xl shadow-black/10">
 
                 {/* Precios */}
                 {(p.precio_noche || p.precio_semana || p.precio_mes) && (
@@ -405,9 +472,10 @@ export default function PropiedadDetalle() {
                   <a
                     href={waLink}
                     target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2.5 w-full bg-[#25D366] hover:bg-[#20bc5a] text-white font-semibold py-4 rounded-2xl transition-colors text-sm"
+                    className="flex items-center justify-center gap-2.5 w-full text-white font-semibold py-4 rounded-2xl text-sm transition-all hover:scale-[1.02] active:scale-95"
+                    style={waGlassStyle}
                   >
-                    <MessageCircle size={18} />
+                    <WhatsAppIcon size={18} />
                     Consultar disponibilidad
                   </a>
                 ) : (
@@ -471,10 +539,11 @@ export default function PropiedadDetalle() {
         <a
           href={waLink}
           target="_blank" rel="noopener noreferrer"
-          className="lg:hidden fixed bottom-6 right-6 z-40 flex items-center gap-2.5 bg-[#25D366] hover:bg-[#20bc5a] text-white font-semibold px-5 py-3.5 rounded-full shadow-lg shadow-[#25D366]/40 transition-all"
+          className="lg:hidden fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-5 py-3.5 rounded-full transition-all hover:scale-105 active:scale-95"
+          style={waGlassStyle}
         >
-          <MessageCircle size={20} />
-          <span className="text-sm">Consultar</span>
+          <WhatsAppIcon size={20} />
+          Consultar
         </a>
       )}
     </div>

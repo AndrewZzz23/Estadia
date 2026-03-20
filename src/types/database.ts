@@ -17,6 +17,13 @@ export interface Tenant {
   logo_url: string | null
   foto_portada: string | null
   descripcion: string | null
+  slogan: string | null
+  instagram_url:     string | null
+  facebook_url:      string | null
+  tiktok_url:        string | null
+  mostrar_instagram: boolean
+  mostrar_facebook:  boolean
+  mostrar_tiktok:    boolean
   moneda: string
   activa: boolean
   created_at: string

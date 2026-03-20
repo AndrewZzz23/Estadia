@@ -17,6 +17,7 @@ CREATE TABLE tenants (
   logo_url       TEXT,                             -- logo del negocio
   foto_portada   TEXT,                             -- imagen/video hero de la página pública
   descripcion    TEXT,                             -- texto de presentación del negocio
+  slogan         TEXT,                             -- frase corta que aparece en el hero
   moneda         TEXT NOT NULL DEFAULT 'COP',      -- moneda de precios
   activa         BOOLEAN NOT NULL DEFAULT true,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -180,3 +181,17 @@ BEGIN
   RETURN (conflicto_reservas = 0 AND conflicto_bloqueos = 0);
 END;
 $$ LANGUAGE plpgsql STABLE;
+
+-- ============================================================
+-- MIGRACIONES
+-- ============================================================
+-- Agregar columna slogan a tenants (ejecutar si la tabla ya existe)
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS slogan TEXT;
+
+-- Redes sociales
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS instagram_url      TEXT;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS facebook_url       TEXT;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS tiktok_url         TEXT;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mostrar_instagram  BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mostrar_facebook   BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mostrar_tiktok     BOOLEAN NOT NULL DEFAULT true;
