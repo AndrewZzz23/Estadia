@@ -71,7 +71,6 @@ export default function Propiedades() {
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">Sin foto</div>
                 )}
-                {/* Badge activa */}
                 <span className={`absolute top-3 right-3 text-xs px-2.5 py-1 rounded-full font-medium ${p.activa ? 'bg-brand-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
                   {p.activa ? 'Activa' : 'Inactiva'}
                 </span>
@@ -95,7 +94,6 @@ export default function Propiedades() {
                   </p>
                 )}
 
-                {/* Acciones */}
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
                   <button
                     onClick={() => toggleActiva(p.id, p.activa)}

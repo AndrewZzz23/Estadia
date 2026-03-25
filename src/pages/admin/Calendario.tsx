@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
 import type { Bloqueo, Propiedad, Reserva } from '../../types/database'
@@ -32,15 +32,18 @@ interface Evento {
 
 export default function Calendario() {
   const { tenant } = useTenant()
+  const navigate = useNavigate()
   const hoy = new Date()
   const [year,  setYear]  = useState(hoy.getFullYear())
   const [month, setMonth] = useState(hoy.getMonth())
   const [propiedades, setPropiedades] = useState<Pick<Propiedad, 'id' | 'nombre'>[]>([])
   const [eventos, setEventos] = useState<Evento[]>([])
   const [filtroProp, setFiltroProp] = useState('todas')
-  const [loading, setLoading] = useState(true)       // solo carga inicial
-  const [loadingMes, setLoadingMes] = useState(false) // navegación de mes
-  const [popup, setPopup] = useState<Evento | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadingMes, setLoadingMes] = useState(false)
+  const [festivoActivo, setFestivoActivo] = useState<string | null>(null)
+  const [tooltip, setTooltip] = useState<{ day: string; x: number; y: number } | null>(null)
+  const [dayModal, setDayModal] = useState<string | null>(null)
   const inicializado = propiedades.length > 0 || !loading
 
   useEffect(() => { cargar() }, [tenant, year, month])
@@ -126,199 +129,473 @@ export default function Calendario() {
     setYear(d.getFullYear()); setMonth(d.getMonth())
   }
 
+  function irAFestivo(dateStr: string) {
+    const d = toDate(dateStr)
+    setYear(d.getFullYear())
+    setMonth(d.getMonth())
+    setFestivoActivo(dateStr)
+    setTimeout(() => setFestivoActivo(null), 2000)
+  }
+
   const hoyStr  = ymd(hoy)
   const festivos = getFestivos(year)
 
-  return (
-    <div className="p-6 flex flex-col" style={{ height: 'calc(100vh - 64px)' }}>
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <div className="flex items-center gap-2">
-          <button onClick={() => navMes(-1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <ChevronLeft size={18} className="text-gray-500" />
-          </button>
-          <h1 className="text-lg font-bold text-gray-900 w-48 text-center">
-            {MESES[month]} {year}
-          </h1>
-          <button onClick={() => navMes(1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <ChevronRight size={18} className="text-gray-500" />
-          </button>
-          <button
-            onClick={() => { setYear(hoy.getFullYear()); setMonth(hoy.getMonth()) }}
-            className="text-xs text-brand-500 hover:text-brand-700 px-2.5 py-1 rounded-lg hover:bg-brand-50 transition-colors"
-          >
-            Hoy
-          </button>
-        </div>
+  const festivosList = (() => {
+    const hoyStr2 = ymd(hoy)
+    return [
+      ...Array.from(getFestivos(year).entries()),
+      ...Array.from(getFestivos(year + 1).entries()),
+    ]
+      .filter(([d]) => d >= hoyStr2)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(0, 8)
+  })()
 
-        <div className="flex items-center gap-3">
-          <select
-            value={filtroProp}
-            onChange={e => setFiltroProp(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
-          >
-            <option value="todas">Todas las propiedades</option>
-            {propiedades.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-          </select>
-          <Link
-            to="/admin/reservas/nueva"
-            className="bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors"
-          >
-            + Reserva
-          </Link>
+  const AMBER = { r: 245, g: 158, b: 11 }
+
+  const festivoGlass = {
+    background: 'linear-gradient(135deg, rgba(245,158,11,0.18) 0%, rgba(245,158,11,0.08) 100%)',
+    border: '1px solid rgba(245,158,11,0.35)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), 0 2px 10px rgba(245,158,11,0.15)',
+  }
+
+  const festivoDivider = 'rgba(245,158,11,0.35)'
+  const festivoAccent  = `rgb(${AMBER.r},${AMBER.g},${AMBER.b})`
+
+  // Panel vertical — desktop sidebar
+  function renderFestivosSidebar() {
+    return (
+      <div className="rounded-2xl overflow-hidden w-full flex flex-col" style={{ background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.9)', boxShadow: '0 4px 24px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,1)' }}>
+        <div className="px-4 pt-4 pb-2">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Próximos festivos</p>
         </div>
+        {festivosList.length === 0 ? (
+          <p className="text-xs text-gray-300 px-4 pb-4">Sin festivos próximos</p>
+        ) : (
+          <ul className="px-3 pb-3 space-y-1.5">
+            {festivosList.map(([d, nombre]) => {
+              const fecha  = toDate(d)
+              const mes    = fecha.toLocaleDateString('es-CO', { month: 'short' }).replace('.','')
+              const activo = festivoActivo === d
+              return (
+                <li
+                  key={d}
+                  onClick={() => irAFestivo(d)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer transition-all hover:scale-[1.02] select-none"
+                  style={{
+                    ...festivoGlass,
+                    ...(activo ? { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), 0 0 0 2px rgba(245,158,11,0.6), 0 2px 10px rgba(245,158,11,0.3)' } : {}),
+                  }}
+                >
+                  <div className="flex-shrink-0 w-8 text-center">
+                    <p className="text-[9px] font-bold uppercase leading-none tracking-wider" style={{ color: festivoAccent }}>{mes}</p>
+                    <p className="text-base font-bold text-gray-800 leading-tight">{fecha.getDate()}</p>
+                  </div>
+                  <div className="w-px h-6 flex-shrink-0" style={{ background: festivoDivider }} />
+                  <p className="text-[11px] text-gray-600 leading-snug">{nombre}</p>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </div>
+    )
+  }
 
-      <div className="flex gap-4 mb-3 flex-wrap">
-        {propiedades.map((p, i) => (
-          <div key={p.id} className="flex items-center gap-1.5 text-xs text-gray-600">
-            <span className={`w-2.5 h-2.5 rounded-full ${COLORES[i % COLORES.length].bg}`} />
-            {p.nombre}
+  // Lista horizontal — mobile (debajo del calendario)
+  function renderFestivosMobile() {
+    return (
+      <div className="rounded-2xl px-4 pt-4 pb-4" style={{ background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.9)', boxShadow: '0 4px 24px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,1)' }}>
+        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Próximos festivos</p>
+        {festivosList.length === 0 ? (
+          <p className="text-xs text-gray-300">Sin festivos próximos</p>
+        ) : (
+          <div className="overflow-x-auto -mx-4 px-4 py-2 -my-2">
+            <div className="flex gap-2" style={{ width: 'max-content' }}>
+              {festivosList.map(([d, nombre]) => {
+                const fecha  = toDate(d)
+                const mes    = fecha.toLocaleDateString('es-CO', { month: 'short' }).replace('.','')
+                const activo = festivoActivo === d
+                return (
+                  <div
+                    key={d}
+                    onClick={() => irAFestivo(d)}
+                    className="flex-shrink-0 rounded-xl px-4 py-3 flex items-center gap-2 cursor-pointer transition-all hover:scale-[1.02] select-none"
+                    style={{
+                      ...festivoGlass,
+                      ...(activo ? { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), 0 0 0 2px rgba(245,158,11,0.6), 0 2px 10px rgba(245,158,11,0.3)' } : {}),
+                    }}
+                  >
+                    <div className="text-center flex-shrink-0">
+                      <p className="text-[9px] font-bold uppercase tracking-wider leading-none" style={{ color: festivoAccent }}>{mes}</p>
+                      <p className="text-lg font-bold text-gray-800 leading-tight">{fecha.getDate()}</p>
+                    </div>
+                    <div className="w-px h-6 flex-shrink-0" style={{ background: festivoDivider }} />
+                    <p className="text-[11px] text-gray-600 leading-snug max-w-[88px]">{nombre}</p>
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        ))}
-        <div className="flex items-center gap-1.5 text-xs text-gray-400">
-          <span className="w-2.5 h-2.5 rounded-full bg-gray-300" />
-          Bloqueo
-        </div>
-        <div className="flex items-center gap-1.5 text-xs text-gray-400">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-300" />
-          Festivo
-        </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-3 sm:p-6 flex flex-col overflow-y-auto">
+
+      {/* ── Filtros y acciones ── */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <select
+          value={filtroProp}
+          onChange={e => setFiltroProp(e.target.value)}
+          className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white max-w-[140px] sm:max-w-none"
+        >
+          <option value="todas">Todas las propiedades</option>
+          {propiedades.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+        </select>
+        <p className="ml-auto text-xs text-gray-400 flex items-center gap-1.5">
+          <span className="text-base leading-none">👆</span>
+          Toca un día libre para crear una reserva
+        </p>
       </div>
 
       {loading ? (
         <p className="text-sm text-gray-400 mt-4">Cargando...</p>
       ) : (
-        <div className="flex gap-6 flex-1 overflow-hidden">
+        <div className="flex flex-col lg:flex-row gap-4">
 
-          {/* ── Calendario ── */}
-          <div className="flex-1 overflow-auto min-w-0 relative">
+          {/* ── Grilla del mes ── */}
+          <div className="flex-1 relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
             {loadingMes && (
-              <div className="absolute inset-0 bg-white/60 z-10 rounded-xl flex items-center justify-center">
-                <span className="text-xs text-gray-400">Cargando...</span>
+              <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
               </div>
             )}
-            <div className="grid grid-cols-7 mb-1">
-              {DIAS.map(d => (
-                <div key={d} className="text-xs font-semibold text-gray-400 text-center py-1 uppercase tracking-wide">{d}</div>
+
+            {/* ── Header mes ── */}
+            <div
+              className="flex items-center justify-between px-3 py-2.5"
+              style={{
+                backgroundColor: '#1E3E50',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+              }}
+            >
+              {/* Navegación centrada pegada al nombre */}
+              <div className="flex-1 flex justify-center items-center gap-0.5">
+                <button
+                  onClick={() => navMes(-1)}
+                  className="p-1.5 rounded-lg transition-all hover:brightness-125"
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
+                  }}
+                >
+                  <ChevronLeft size={16} className="text-white/70" />
+                </button>
+                <h1 className="text-base font-bold text-white px-2 tracking-wide">
+                  {MESES[month]} {year}
+                </h1>
+                <button
+                  onClick={() => navMes(1)}
+                  className="p-1.5 rounded-lg transition-all hover:brightness-125"
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15)',
+                  }}
+                >
+                  <ChevronRight size={16} className="text-white/70" />
+                </button>
+              </div>
+              {/* Hoy a la derecha */}
+              <button
+                onClick={() => { setYear(hoy.getFullYear()); setMonth(hoy.getMonth()) }}
+                className="text-xs font-medium px-2.5 py-1 rounded-lg transition-all flex-shrink-0"
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: 'rgba(255,255,255,0.75)',
+                }}
+              >
+                Hoy
+              </button>
+            </div>
+
+            {/* Cabecera días */}
+            <div className="grid grid-cols-7 border-b border-gray-200">
+              {DIAS.map((d, i) => (
+                <div
+                  key={d}
+                  className={`py-2 text-center text-[10px] sm:text-[11px] font-semibold uppercase tracking-widest
+                    ${i === 0 || i === 6 ? 'text-gray-400' : 'text-gray-500'}`}
+                >
+                  {d}
+                </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-xl overflow-hidden border border-gray-200">
+            {/* Celdas */}
+            <div className="grid grid-cols-7 divide-x divide-y divide-gray-200">
               {dias.map((dia, i) => {
                 const esMes   = dia.getMonth() === month
                 const esHoy   = ymd(dia) === hoyStr
+                const esFinde = dia.getDay() === 0 || dia.getDay() === 6
                 const dStr    = ymd(dia)
                 const festivo = festivos.get(dStr)
                 const evs     = eventosDelDia(dia)
 
+                const esFestivoActivo = festivoActivo === dStr
                 return (
-                  <div key={i} className={`p-1.5 min-h-[88px] ${!esMes ? 'bg-gray-50' : festivo ? 'bg-amber-50' : 'bg-white'}`}>
-                    <div
-                      className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1
-                      ${esHoy ? 'bg-brand-500 text-white' : festivo ? 'text-amber-700 font-semibold' : esMes ? 'text-gray-700' : 'text-gray-300'}`}
-                      title={festivo}
-                    >
-                      {dia.getDate()}
+                  <div
+                    key={i}
+                    onClick={() => {
+                      if (evs.length > 0) { setTooltip(null); setDayModal(dStr) }
+                      else navigate(`/admin/reservas/nueva?fecha=${dStr}`)
+                    }}
+                    onMouseEnter={evs.length > 0 ? (e) => {
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                      setTooltip({ day: dStr, x: rect.left, y: rect.top })
+                    } : undefined}
+                    onMouseLeave={evs.length > 0 ? () => setTooltip(null) : undefined}
+                    className={`p-1.5 sm:p-2 min-h-[60px] sm:min-h-[90px] transition-all duration-300 cursor-pointer
+                      ${esFestivoActivo ? 'bg-amber-100' : !esMes ? 'bg-gray-50/60' : esFinde && !festivo ? 'bg-gray-50/40' : !festivo ? 'bg-white' : ''}`}
+                    style={
+                      esFestivoActivo
+                        ? { boxShadow: 'inset 0 0 0 2px rgba(245,158,11,0.5)' }
+                        : esHoy
+                        ? { background: 'linear-gradient(135deg, rgba(30,62,80,0.1) 0%, rgba(30,62,80,0.05) 100%)', boxShadow: 'inset 0 0 0 1.5px rgba(30,62,80,0.2)' }
+                        : festivo
+                        ? { background: 'linear-gradient(135deg, rgba(245,158,11,0.18) 0%, rgba(245,158,11,0.08) 100%)' }
+                        : {}
+                    }
+                  >
+                    {/* Número del día */}
+                    <div className="flex justify-end mb-1">
+                      {esHoy ? (
+                        <span
+                          className="text-[11px] sm:text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(30,62,80,0.90), rgba(30,62,80,0.65))',
+                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 6px rgba(30,62,80,0.45)',
+                            border: '1px solid rgba(30,62,80,0.4)',
+                            color: 'white',
+                          }}
+                        >
+                          {dia.getDate()}
+                        </span>
+                      ) : festivo ? (
+                        <span
+                          className="text-[11px] sm:text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full text-amber-800"
+                          title={festivo}
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(245,158,11,0.85), rgba(251,191,36,0.65))',
+                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.65), 0 2px 6px rgba(245,158,11,0.4)',
+                            border: '1px solid rgba(245,158,11,0.45)',
+                          }}
+                        >
+                          {dia.getDate()}
+                        </span>
+                      ) : (
+                        <span
+                          className={`text-[11px] sm:text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full
+                            ${esMes ? esFinde ? 'text-gray-500' : 'text-gray-800' : 'text-gray-400'}`}
+                        >
+                          {dia.getDate()}
+                        </span>
+                      )}
                     </div>
 
+                    {/* Eventos */}
                     <div className="space-y-0.5">
-                      {evs.slice(0, 3).map(ev => {
+                      {evs.slice(0, 2).map(ev => {
                         const color    = COLORES[ev.colorIdx]
                         const esInicio = ymd(dia) === ev.fecha_inicio
                         return (
-                          <button
+                          <div
                             key={ev.id}
-                            onClick={() => setPopup(ev)}
-                            className={`w-full text-left text-[10px] px-1.5 py-px rounded truncate leading-4
-                              ${ev.tipo === 'bloqueo' ? 'bg-gray-200 text-gray-600' : `${color.bg} ${color.text}`}`}
+                            className={`w-full text-left text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-md truncate font-medium leading-4
+                              ${ev.tipo === 'bloqueo'
+                                ? 'bg-gray-100 text-gray-500'
+                                : `${color.bg} ${color.text} opacity-90`}`}
                             title={ev.label}
                           >
                             {esInicio ? ev.label : <span className="opacity-0">·</span>}
-                          </button>
+                          </div>
                         )
                       })}
-                      {evs.length > 3 && (
-                        <p className="text-[10px] text-gray-400 px-1">+{evs.length - 3}</p>
+                      {evs.length > 2 && (
+                        <span className="text-[9px] text-gray-400 px-1.5 font-medium">
+                          +{evs.length - 2} más
+                        </span>
                       )}
                     </div>
                   </div>
                 )
               })}
             </div>
-          </div>
 
-          {/* ── Sidebar: próximos festivos ── */}
-          <div className="w-56 flex-shrink-0">
-            <div className="bg-white border border-gray-100 rounded-xl p-4">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Próximos festivos</h2>
-              <div className="space-y-2">
-                {(() => {
-                  const hoyStr2 = ymd(hoy)
-                  // Recopilar festivos de este año y el siguiente
-                  const todos = [
-                    ...Array.from(getFestivos(year).entries()),
-                    ...Array.from(getFestivos(year + 1).entries()),
-                  ]
-                    .filter(([d]) => d >= hoyStr2)
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .slice(0, 8)
-
-                  if (todos.length === 0) return <p className="text-xs text-gray-400">Sin festivos próximos</p>
-
-                  return todos.map(([d, nombre]) => {
-                    const fecha = toDate(d)
-                    return (
-                      <div key={d} className="flex items-start gap-2.5">
-                        <div className="flex-shrink-0 bg-amber-100 rounded-lg px-2 py-1 text-center min-w-[36px]">
-                          <p className="text-[10px] text-amber-600 font-medium uppercase leading-none">
-                            {fecha.toLocaleDateString('es-CO', { month: 'short' })}
-                          </p>
-                          <p className="text-sm font-bold text-amber-700 leading-tight">{fecha.getDate()}</p>
-                        </div>
-                        <p className="text-xs text-gray-600 leading-tight pt-0.5">{nombre}</p>
-                      </div>
-                    )
-                  })
-                })()}
+            {/* Leyenda */}
+            {propiedades.length > 0 && (
+              <div className="flex gap-3 px-3 py-2.5 border-t border-gray-100 flex-wrap">
+                {propiedades.map((p, i) => (
+                  <div key={p.id} className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <span className={`w-2 h-2 rounded-full ${COLORES[i % COLORES.length].bg}`} />
+                    {p.nombre}
+                  </div>
+                ))}
+                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <span className="w-2 h-2 rounded-full bg-gray-300" />Bloqueo
+                </div>
               </div>
-            </div>
-          </div>
-
-        </div>
-      )}
-
-      {popup && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setPopup(null)}>
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium
-                  ${popup.tipo === 'bloqueo' ? 'bg-gray-100 text-gray-600' : 'bg-brand-50 text-brand-600'}`}>
-                  {popup.tipo === 'bloqueo' ? 'Bloqueo' : 'Reserva'}
-                </span>
-                <p className="font-semibold text-gray-900 mt-2">{popup.label}</p>
-              </div>
-              <button onClick={() => setPopup(null)} className="text-gray-300 hover:text-gray-500 text-xl leading-none">✕</button>
-            </div>
-
-            <div className="space-y-1.5 text-sm text-gray-600 mb-5">
-              <p><span className="text-gray-400">Propiedad: </span>{propiedades.find(p => p.id === popup.propiedad_id)?.nombre ?? '—'}</p>
-              <p><span className="text-gray-400">Entrada: </span>{toDate(popup.fecha_inicio).toLocaleDateString('es-CO', { day:'2-digit', month:'short', year:'numeric' })}</p>
-              <p><span className="text-gray-400">Salida: </span>{toDate(popup.fecha_fin).toLocaleDateString('es-CO', { day:'2-digit', month:'short', year:'numeric' })}</p>
-            </div>
-
-            {popup.tipo === 'reserva' && (
-              <Link
-                to={`/admin/reservas/${popup.id}/editar`}
-                onClick={() => setPopup(null)}
-                className="block text-center bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
-              >
-                Ver / editar reserva
-              </Link>
             )}
           </div>
+
+          {/* ── Festivos lateral — solo desktop ── */}
+          <div className="hidden lg:flex w-56 flex-shrink-0">
+            {renderFestivosSidebar()}
+          </div>
+
+          {/* ── Festivos horizontal — solo mobile/tablet ── */}
+          <div className="lg:hidden">
+            {renderFestivosMobile()}
+          </div>
+
         </div>
       )}
+
+      {/* ── Modal día ocupado ── */}
+      {dayModal && (() => {
+        const evsDia = eventos.filter(ev => {
+          if (filtroProp !== 'todas' && ev.propiedad_id !== filtroProp) return false
+          return ev.fecha_inicio <= dayModal && ev.fecha_fin > dayModal
+        })
+        const fecha = toDate(dayModal)
+        const fechaLabel = fecha.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
+        return (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setDayModal(null)}>
+            <div
+              className="rounded-2xl w-full max-w-sm mx-4 overflow-hidden shadow-2xl"
+              style={{
+                background: 'rgba(255,255,255,0.95)',
+                border: '1px solid rgba(255,255,255,0.9)',
+                boxShadow: '0 24px 64px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,1)',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="px-5 pt-5 pb-4 flex items-start justify-between" style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-0.5">Día ocupado</p>
+                  <h2 className="text-base font-bold text-gray-900 capitalize">{fechaLabel}</h2>
+                </div>
+                <button onClick={() => setDayModal(null)} className="text-gray-300 hover:text-gray-500 text-xl leading-none mt-0.5">✕</button>
+              </div>
+
+              {/* Eventos */}
+              <div className="px-5 py-4 space-y-2.5 max-h-64 overflow-y-auto">
+                {evsDia.map(ev => {
+                  const color = COLORES[ev.colorIdx]
+                  const prop  = propiedades.find(p => p.id === ev.propiedad_id)
+                  return (
+                    <div
+                      key={ev.id}
+                      className="flex items-center gap-3 p-3 rounded-xl"
+                      style={{
+                        background: 'rgba(0,0,0,0.03)',
+                        border: '1px solid rgba(0,0,0,0.05)',
+                      }}
+                    >
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${ev.tipo === 'bloqueo' ? 'bg-gray-300' : color.bg}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{ev.label}</p>
+                        <p className="text-xs text-gray-400">{prop?.nombre ?? '—'} · {ev.tipo === 'bloqueo' ? 'Bloqueo' : 'Reserva'}</p>
+                      </div>
+                      {ev.tipo === 'reserva' && (
+                        <Link
+                          to={`/admin/reservas/${ev.id}/editar`}
+                          onClick={() => setDayModal(null)}
+                          className="text-xs font-medium px-2.5 py-1 rounded-lg flex-shrink-0 transition-colors hover:brightness-110"
+                          style={{ backgroundColor: '#1E3E50', color: 'white' }}
+                        >
+                          Ver
+                        </Link>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Footer — crear reserva */}
+              <div className="px-5 pb-5 pt-3" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                <Link
+                  to={`/admin/reservas/nueva?fecha=${dayModal}`}
+                  onClick={() => setDayModal(null)}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold transition-all hover:brightness-110"
+                  style={{
+                    backgroundColor: '#1E3E50',
+                    color: 'white',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 8px rgba(30,62,80,0.25)',
+                  }}
+                >
+                  <span className="text-base leading-none">+</span>
+                  Crear reserva para este día
+                </Link>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── Tooltip hover día ── */}
+      {tooltip && (() => {
+        const evsDia = eventos.filter(ev => {
+          if (filtroProp !== 'todas' && ev.propiedad_id !== filtroProp) return false
+          return ev.fecha_inicio <= tooltip.day && ev.fecha_fin > tooltip.day
+        })
+        if (!evsDia.length) return null
+        return (
+          <div
+            className="fixed z-[60] pointer-events-none"
+            style={{ top: tooltip.y - 8, left: tooltip.x, transform: 'translateY(-100%)' }}
+          >
+            <div
+              className="rounded-xl px-3 py-2.5 min-w-[160px] max-w-[220px]"
+              style={{
+                background: 'rgba(255,255,255,0.92)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.9)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1)',
+              }}
+            >
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+                {toDate(tooltip.day).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
+              </p>
+              <div className="space-y-1">
+                {evsDia.map(ev => {
+                  const color = COLORES[ev.colorIdx]
+                  return (
+                    <div key={ev.id} className="flex items-center gap-2">
+                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ev.tipo === 'bloqueo' ? 'bg-gray-300' : color.bg}`} />
+                      <span className="text-[11px] text-gray-700 truncate">{ev.label}</span>
+                      <span className="text-[10px] text-gray-400 ml-auto flex-shrink-0">
+                        {propiedades.find(p => p.id === ev.propiedad_id)?.nombre?.split(' ')[0] ?? ''}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            {/* flecha */}
+            <div className="w-3 h-3 mx-3 rotate-45 -mt-1.5"
+              style={{ background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(255,255,255,0.9)', borderTop: 'none', borderLeft: 'none' }}
+            />
+          </div>
+        )
+      })()}
     </div>
   )
 }
