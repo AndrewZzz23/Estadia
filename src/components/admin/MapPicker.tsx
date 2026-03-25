@@ -19,9 +19,11 @@ export default function MapPicker({ lat, lng, ubicacion, onChange }: Props) {
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
 
-    // Importar Leaflet de forma dinámica para evitar SSR issues
+    let cancelled = false
+
     import('leaflet').then(L => {
-      // Fix iconos por defecto de Leaflet con Vite
+      if (cancelled || !containerRef.current || mapRef.current) return
+
       delete (L.Icon.Default.prototype as any)._getIconUrl
       L.Icon.Default.mergeOptions({
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -29,7 +31,7 @@ export default function MapPicker({ lat, lng, ubicacion, onChange }: Props) {
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
       })
 
-      const initialLat = lat ?? 6.2442    // Medellín por defecto
+      const initialLat = lat ?? 6.2442
       const initialLng = lng ?? -75.5812
 
       const map = L.map(containerRef.current!).setView([initialLat, initialLng], lat ? 14 : 7)
@@ -40,7 +42,6 @@ export default function MapPicker({ lat, lng, ubicacion, onChange }: Props) {
         maxZoom: 19,
       }).addTo(map)
 
-      // Marcador inicial si ya hay coordenadas
       if (lat && lng) {
         const marker = L.marker([lat, lng], { draggable: true }).addTo(map)
         markerRef.current = marker
@@ -50,7 +51,6 @@ export default function MapPicker({ lat, lng, ubicacion, onChange }: Props) {
         })
       }
 
-      // Click en el mapa para colocar/mover el marcador
       map.on('click', (e) => {
         const { lat, lng } = e.latlng
         if (markerRef.current) {
@@ -68,8 +68,10 @@ export default function MapPicker({ lat, lng, ubicacion, onChange }: Props) {
     })
 
     return () => {
+      cancelled = true
       mapRef.current?.remove()
       mapRef.current = null
+      markerRef.current = null
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

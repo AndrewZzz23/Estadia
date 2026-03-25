@@ -30,7 +30,7 @@ const AMENIDADES_ICONOS: Record<string, LucideIcon> = {
 }
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-const DIAS  = ['D','L','M','M','J','V','S']
+const DIAS  = ['Do','Lu','Ma','Mi','Ju','Vi','Sá']
 
 function ymd(d: Date) { return d.toISOString().slice(0, 10) }
 
@@ -118,7 +118,7 @@ export default function PropiedadDetalle() {
   const p = propiedad as PropiedadConFotos
   const fotos: FotoPropiedad[] = p.fotos_propiedades
 
-  const waNum = (p.whatsapp ?? t.telefono ?? '').replace(/\D/g, '')
+  const waNum = (t.telefono ?? '').replace(/\D/g, '')
   const waMsg = encodeURIComponent(`Hola, me interesa la propiedad "${p.nombre}". ¿Está disponible?`)
   const waLink = `https://wa.me/${waNum}?text=${waMsg}`
 
@@ -409,11 +409,11 @@ export default function PropiedadDetalle() {
                     <span className="text-gray-400 text-xs">Hoy</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-md bg-red-300 inline-block" />
+                    <span className="w-2.5 h-2.5 rounded-md bg-red-100 border border-red-300 inline-block" />
                     <span className="text-gray-400 text-xs">Ocupado</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-md bg-amber-300 inline-block" />
+                    <span className="w-2.5 h-2.5 rounded-md bg-amber-100 border border-amber-300 inline-block" />
                     <span className="text-gray-400 text-xs">Festivo</span>
                   </div>
                 </div>

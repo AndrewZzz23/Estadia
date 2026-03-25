@@ -45,7 +45,6 @@ export interface Propiedad {
   habitaciones: number | null
   banos: number | null
   amenidades: string[]
-  whatsapp: string | null
   activa: boolean
   orden: number
   created_at: string

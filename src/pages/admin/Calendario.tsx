@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
 import type { Bloqueo, Propiedad, Reserva } from '../../types/database'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { getFestivos } from '../../lib/festivos'
+import { navyGlassStyle } from '../../lib/styles'
+import QuickReservaPanel from '../../components/admin/QuickReservaPanel'
 
 const COLORES = [
   { bg: 'bg-[#2A7A68]',  text: 'text-white' },
@@ -32,7 +34,6 @@ interface Evento {
 
 export default function Calendario() {
   const { tenant } = useTenant()
-  const navigate = useNavigate()
   const hoy = new Date()
   const [year,  setYear]  = useState(hoy.getFullYear())
   const [month, setMonth] = useState(hoy.getMonth())
@@ -43,7 +44,15 @@ export default function Calendario() {
   const [loadingMes, setLoadingMes] = useState(false)
   const [festivoActivo, setFestivoActivo] = useState<string | null>(null)
   const [tooltip, setTooltip] = useState<{ day: string; x: number; y: number } | null>(null)
-  const [dayModal, setDayModal] = useState<string | null>(null)
+  const [dayModal, setDayModal]   = useState<string | null>(null)
+  const [quickOpen, setQuickOpen] = useState(false)
+  const [quickFecha, setQuickFecha] = useState('')
+
+  function abrirQuick(fecha: string) {
+    setDayModal(null)
+    setQuickFecha(fecha)
+    setQuickOpen(true)
+  }
   const inicializado = propiedades.length > 0 || !loading
 
   useEffect(() => { cargar() }, [tenant, year, month])
@@ -244,22 +253,7 @@ export default function Calendario() {
 
   return (
     <div className="p-3 sm:p-6 flex flex-col overflow-y-auto">
-
-      {/* ── Filtros y acciones ── */}
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <select
-          value={filtroProp}
-          onChange={e => setFiltroProp(e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white max-w-[140px] sm:max-w-none"
-        >
-          <option value="todas">Todas las propiedades</option>
-          {propiedades.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-        </select>
-        <p className="ml-auto text-xs text-gray-400 flex items-center gap-1.5">
-          <span className="text-base leading-none">👆</span>
-          Toca un día libre para crear una reserva
-        </p>
-      </div>
+      <div className="w-full max-w-5xl mx-auto flex flex-col flex-1">
 
       {loading ? (
         <p className="text-sm text-gray-400 mt-4">Cargando...</p>
@@ -267,7 +261,25 @@ export default function Calendario() {
         <div className="flex flex-col lg:flex-row gap-4">
 
           {/* ── Grilla del mes ── */}
-          <div className="flex-1 relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+          <div className="flex-1 flex flex-col min-w-0">
+
+            {/* Filtro + hint encima del calendario */}
+            <div className="flex items-center justify-end gap-2 mb-1">
+              <select
+                value={filtroProp}
+                onChange={e => setFiltroProp(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
+              >
+                <option value="todas">Todas las propiedades</option>
+                {propiedades.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </select>
+            </div>
+            <p className="text-xs text-gray-400 flex items-center gap-1.5 mb-2">
+              <span className="text-base leading-none">👆</span>
+              Toca un día para crear una reserva
+            </p>
+
+          <div className="relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
             {loadingMes && (
               <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center">
                 <div className="w-5 h-5 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
@@ -354,14 +366,14 @@ export default function Calendario() {
                     key={i}
                     onClick={() => {
                       if (evs.length > 0) { setTooltip(null); setDayModal(dStr) }
-                      else navigate(`/admin/reservas/nueva?fecha=${dStr}`)
+                      else abrirQuick(dStr)
                     }}
                     onMouseEnter={evs.length > 0 ? (e) => {
                       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                       setTooltip({ day: dStr, x: rect.left, y: rect.top })
                     } : undefined}
                     onMouseLeave={evs.length > 0 ? () => setTooltip(null) : undefined}
-                    className={`p-1.5 sm:p-2 min-h-[60px] sm:min-h-[90px] transition-all duration-300 cursor-pointer
+                    className={`p-1 sm:p-2 h-[80px] sm:h-[90px] overflow-hidden transition-all duration-300 cursor-pointer
                       ${esFestivoActivo ? 'bg-amber-100' : !esMes ? 'bg-gray-50/60' : esFinde && !festivo ? 'bg-gray-50/40' : !festivo ? 'bg-white' : ''}`}
                     style={
                       esFestivoActivo
@@ -374,7 +386,7 @@ export default function Calendario() {
                     }
                   >
                     {/* Número del día */}
-                    <div className="flex justify-end mb-1">
+                    <div className="flex justify-end mb-0.5">
                       {esHoy ? (
                         <span
                           className="text-[11px] sm:text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full"
@@ -411,13 +423,14 @@ export default function Calendario() {
 
                     {/* Eventos */}
                     <div className="space-y-0.5">
-                      {evs.slice(0, 2).map(ev => {
+                      {evs.slice(0, 2).map((ev, evIdx) => {
                         const color    = COLORES[ev.colorIdx]
                         const esInicio = ymd(dia) === ev.fecha_inicio
                         return (
                           <div
                             key={ev.id}
-                            className={`w-full text-left text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-md truncate font-medium leading-4
+                            className={`w-full text-left text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-px sm:py-0.5 rounded-md truncate font-medium leading-[14px] sm:leading-4
+                              ${evIdx === 1 ? 'hidden sm:block' : ''}
                               ${ev.tipo === 'bloqueo'
                                 ? 'bg-gray-100 text-gray-500'
                                 : `${color.bg} ${color.text} opacity-90`}`}
@@ -427,8 +440,15 @@ export default function Calendario() {
                           </div>
                         )
                       })}
+                      {/* móvil: +N si hay más de 1 */}
+                      {evs.length > 1 && (
+                        <span className="sm:hidden text-[9px] text-gray-400 px-1 font-medium">
+                          +{evs.length - 1} más
+                        </span>
+                      )}
+                      {/* desktop: +N si hay más de 2 */}
                       {evs.length > 2 && (
-                        <span className="text-[9px] text-gray-400 px-1.5 font-medium">
+                        <span className="hidden sm:inline text-[9px] text-gray-400 px-1.5 font-medium">
                           +{evs.length - 2} más
                         </span>
                       )}
@@ -453,6 +473,7 @@ export default function Calendario() {
               </div>
             )}
           </div>
+          </div>{/* fin flex-col calendario */}
 
           {/* ── Festivos lateral — solo desktop ── */}
           <div className="hidden lg:flex w-56 flex-shrink-0">
@@ -531,9 +552,8 @@ export default function Calendario() {
 
               {/* Footer — crear reserva */}
               <div className="px-5 pb-5 pt-3" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-                <Link
-                  to={`/admin/reservas/nueva?fecha=${dayModal}`}
-                  onClick={() => setDayModal(null)}
+                <button
+                  onClick={() => abrirQuick(dayModal!)}
                   className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold transition-all hover:brightness-110"
                   style={{
                     backgroundColor: '#1E3E50',
@@ -543,12 +563,26 @@ export default function Calendario() {
                 >
                   <span className="text-base leading-none">+</span>
                   Crear reserva para este día
-                </Link>
+                </button>
               </div>
             </div>
           </div>
         )
       })()}
+
+      </div>{/* fin max-w-5xl */}
+
+      {/* ── Quick Reserva Panel ── */}
+      {quickOpen && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={() => setQuickOpen(false)} />
+      )}
+      <QuickReservaPanel
+        open={quickOpen}
+        onClose={() => setQuickOpen(false)}
+        fechaInicio={quickFecha}
+        propiedadDefault={filtroProp !== 'todas' ? filtroProp : ''}
+        onCreated={() => { setQuickOpen(false); cargar() }}
+      />
 
       {/* ── Tooltip hover día ── */}
       {tooltip && (() => {

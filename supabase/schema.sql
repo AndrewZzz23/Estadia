@@ -43,7 +43,6 @@ CREATE TABLE propiedades (
   habitaciones    INT,
   banos           INT,
   amenidades      JSONB NOT NULL DEFAULT '[]',    -- ["WiFi", "Piscina", "BBQ", ...]
-  whatsapp        TEXT,                            -- número con código de país: 573001234567
   activa          BOOLEAN NOT NULL DEFAULT true,
   orden           INT NOT NULL DEFAULT 0,          -- orden de aparición en la web pública
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -195,3 +194,6 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS tiktok_url         TEXT;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mostrar_instagram  BOOLEAN NOT NULL DEFAULT true;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mostrar_facebook   BOOLEAN NOT NULL DEFAULT true;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mostrar_tiktok     BOOLEAN NOT NULL DEFAULT true;
+
+-- Eliminar whatsapp por propiedad (se usa el teléfono de empresa)
+ALTER TABLE propiedades DROP COLUMN IF EXISTS whatsapp;

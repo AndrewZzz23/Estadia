@@ -27,6 +27,16 @@ export const ttGlassStyle: CSSProperties = {
   color: 'white',
 }
 
+export const navyGlassStyle: CSSProperties = {
+  background: 'linear-gradient(135deg, rgba(30,62,80,0.85), rgba(42,122,104,0.7))',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  border: '1px solid rgba(255,255,255,0.25)',
+  boxShadow: '0 8px 32px rgba(30,62,80,0.45), inset 0 1px 0 rgba(255,255,255,0.2)',
+  color: 'white',
+  fontWeight: 600,
+}
+
 export const waGlassStyle: CSSProperties = {
   background: 'linear-gradient(135deg, rgba(37,211,102,0.75), rgba(18,140,60,0.65))',
   backdropFilter: 'blur(20px)',

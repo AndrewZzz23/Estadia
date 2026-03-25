@@ -389,7 +389,7 @@ function CardIOS({ p, slug, invertida }: {
           </div>
         )}
         {p.descripcion && (
-          <p className="text-gray-500 text-base mt-4 leading-relaxed whitespace-pre-wrap">{p.descripcion}</p>
+          <p className="text-gray-500 text-base mt-4 leading-relaxed line-clamp-4">{p.descripcion}</p>
         )}
         <div className="flex items-center gap-4 mt-4 text-gray-400 text-sm">
           {p.capacidad    && <span className="flex items-center gap-1"><Users size={12}/>{p.capacidad} pers.</span>}

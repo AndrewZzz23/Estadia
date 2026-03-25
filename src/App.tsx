@@ -10,7 +10,6 @@ import PropiedadDetalle from './pages/public/PropiedadDetalle'
 import AdminLogin from './pages/admin/Login'
 import Dashboard from './pages/admin/Dashboard'
 import Propiedades from './pages/admin/Propiedades'
-import PropiedadForm from './pages/admin/PropiedadForm'
 import Reservas from './pages/admin/Reservas'
 import ReservaForm from './pages/admin/ReservaForm'
 import Calendario from './pages/admin/Calendario'
@@ -36,8 +35,6 @@ export default function App() {
             <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard"   element={<Dashboard />} />
               <Route path="/admin/propiedades" element={<Propiedades />} />
-              <Route path="/admin/propiedades/nueva" element={<PropiedadForm />} />
-              <Route path="/admin/propiedades/:id/editar" element={<PropiedadForm />} />
               <Route path="/admin/reservas"              element={<Reservas />} />
               <Route path="/admin/reservas/nueva"        element={<ReservaForm />} />
               <Route path="/admin/reservas/:id/editar"   element={<ReservaForm />} />

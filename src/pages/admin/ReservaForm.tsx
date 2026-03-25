@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
 import type { EstadoReserva, Propiedad, Reserva } from '../../types/database'
+import { navyGlassStyle } from '../../lib/styles'
 
 type FormData = {
   propiedad_id: string
@@ -72,7 +73,15 @@ export default function ReservaForm() {
   }, [tenant, id, esEdicion])
 
   function set(field: keyof FormData, value: string) {
-    setForm(prev => ({ ...prev, [field]: value }))
+    setForm(prev => {
+      const next = { ...prev, [field]: value }
+      if (field === 'fecha_inicio' && value && next.fecha_fin && next.fecha_fin <= value) {
+        const d = new Date(value + 'T00:00:00')
+        d.setDate(d.getDate() + 1)
+        next.fecha_fin = d.toISOString().slice(0, 10)
+      }
+      return next
+    })
     if (field === 'fecha_inicio' || field === 'fecha_fin' || field === 'propiedad_id') {
       setDisponible(null)
     }
@@ -133,8 +142,8 @@ export default function ReservaForm() {
   if (loading) return <div className="p-8 text-gray-400 text-sm">Cargando...</div>
 
   return (
-    <div className="p-8 max-w-2xl">
-      <h1 className="text-xl font-bold text-brand-900 mb-6">
+    <div className="p-4 sm:p-8 max-w-2xl">
+      <h1 className="text-xl font-bold text-[#1E3E50] mb-6">
         {esEdicion ? 'Editar reserva' : 'Nueva reserva'}
       </h1>
 
@@ -161,7 +170,9 @@ export default function ReservaForm() {
             </Field>
             <Field label="Salida *">
               <input type="date" value={form.fecha_fin}
-                onChange={e => set('fecha_fin', e.target.value)} className={input()} />
+                onChange={e => set('fecha_fin', e.target.value)}
+                min={form.fecha_inicio || undefined}
+                className={`${input()} ${form.fecha_fin && form.fecha_inicio && form.fecha_fin <= form.fecha_inicio ? 'border-red-300 ring-1 ring-red-200' : ''}`} />
             </Field>
           </div>
 
@@ -175,7 +186,7 @@ export default function ReservaForm() {
                 type="button"
                 onClick={verificarDisponibilidad}
                 disabled={verificando}
-                className="text-xs text-brand-500 hover:text-brand-700 underline"
+                className="text-xs text-[#2A7A68] hover:text-[#1E3E50] underline"
               >
                 {verificando ? 'Verificando...' : 'Verificar disponibilidad'}
               </button>
@@ -219,9 +230,10 @@ export default function ReservaForm() {
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Monto total">
-              <input type="number" min="0" value={form.monto_total}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => set('monto_total', e.target.value)}
-                className={input()} placeholder="350000" />
+              <input type="text" inputMode="numeric"
+                value={form.monto_total ? Number(form.monto_total).toLocaleString('es-CO') : ''}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => set('monto_total', e.target.value.replace(/\D/g, ''))}
+                className={input()} placeholder="350.000" />
             </Field>
             <Field label="Estado">
               <select value={form.estado}
@@ -246,13 +258,14 @@ export default function ReservaForm() {
         <div className="flex gap-3">
           <button
             type="submit" disabled={guardando}
-            className="bg-brand-500 hover:bg-brand-600 disabled:bg-brand-200 text-white font-medium px-6 py-2.5 rounded-lg text-sm transition-colors"
+            className="px-6 py-2.5 rounded-xl text-sm transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+            style={navyGlassStyle}
           >
             {guardando ? 'Guardando...' : esEdicion ? 'Guardar cambios' : 'Crear reserva'}
           </button>
           <button
             type="button" onClick={() => navigate('/admin/reservas')}
-            className="text-gray-500 hover:text-gray-700 px-4 py-2.5 rounded-lg text-sm hover:bg-gray-100 transition-colors"
+            className="text-gray-500 hover:text-gray-700 px-4 py-2.5 rounded-xl text-sm hover:bg-gray-100 transition-colors"
           >
             Cancelar
           </button>
@@ -272,5 +285,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function input() {
-  return 'w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white'
+  return 'w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2A7A68]/30 bg-white'
 }

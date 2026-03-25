@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Home, CalendarCheck, CalendarDays, LogOut, Building2, ChevronRight } from 'lucide-react'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { LayoutDashboard, Home, CalendarCheck, CalendarDays, LogOut, ChevronRight } from 'lucide-react'
 import { useTenant } from '../../contexts/TenantContext'
 import Logo from '../Logo'
 import logoIcon from '../../assets/estadia-icon.svg'
@@ -10,7 +10,6 @@ const navItems = [
   { to: '/admin/propiedades', label: 'Propiedades',  icon: Home            },
   { to: '/admin/reservas',    label: 'Reservas',     icon: CalendarCheck   },
   { to: '/admin/calendario',  label: 'Calendario',   icon: CalendarDays    },
-  { to: '/admin/empresa',     label: 'Mi empresa',   icon: Building2       },
 ]
 
 export default function AdminLayout() {
@@ -106,8 +105,29 @@ export default function AdminLayout() {
       </aside>
 
       {/* ── CONTENIDO ── */}
-      <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
-        <Outlet />
+      <main className="flex-1 overflow-y-auto pb-16 md:pb-0 flex flex-col">
+
+        {/* Top bar — solo móvil */}
+        <Link to="/admin/empresa" className="md:hidden flex items-center gap-3 px-4 py-3 bg-[#1E3E50] flex-shrink-0 active:bg-white/5 transition-colors">
+          {tenant?.logo_url ? (
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 bg-white/10 flex-shrink-0">
+              <img src={tenant.logo_url} alt={tenant.nombre} className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">{tenant?.nombre?.charAt(0)}</span>
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-white text-sm font-semibold truncate">{tenant?.nombre}</p>
+            <p className="text-[11px]" style={{ color: '#64B5A0' }}>Panel admin</p>
+          </div>
+          <img src={logoIcon} alt="Estadia" className="w-6 h-6 opacity-40" />
+        </Link>
+
+        <div className="flex-1 overflow-y-auto">
+          <Outlet />
+        </div>
       </main>
 
       {/* ── BOTTOM NAV — mobile ── */}
