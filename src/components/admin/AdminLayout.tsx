@@ -110,8 +110,9 @@ export default function AdminLayout() {
 
           {/* Top bar — sticky dentro del scroll, el contenido pasa detrás */}
           <div
-            className="md:hidden sticky top-0 z-10 flex items-center gap-3 px-4 py-3"
+            className="md:hidden sticky top-0 z-10 flex items-center gap-3 px-4 pb-3"
             style={{
+              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
               background: 'rgba(16,24,32,0.55)',
               backdropFilter: 'saturate(180%) blur(24px)',
               WebkitBackdropFilter: 'saturate(180%) blur(24px)',
