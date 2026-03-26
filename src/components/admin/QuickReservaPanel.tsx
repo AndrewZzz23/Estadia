@@ -109,7 +109,7 @@ export default function QuickReservaPanel({ open, onClose, fechaInicio, propieda
     onCreated()
   }
 
-  const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2A7A68]/30 bg-white'
+  const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-[#2A7A68]/30 bg-white'
   const fechaLabel = (fechaInicio || today())
     ? new Date((fechaInicio || today()) + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
     : ''
@@ -147,7 +147,7 @@ export default function QuickReservaPanel({ open, onClose, fechaInicio, propieda
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Entrada *</label>
             <input type="date" value={form.fecha_inicio} onChange={e => set('fecha_inicio', e.target.value)} className={inp} />

@@ -116,6 +116,7 @@ export default function AdminLayout() {
             backdropFilter: 'saturate(180%) blur(24px)',
             WebkitBackdropFilter: 'saturate(180%) blur(24px)',
             borderBottom: '1px solid rgba(255,255,255,0.08)',
+            touchAction: 'none',
           }}
         >
           <Link to="/admin/empresa" className="relative flex-shrink-0 active:scale-95 transition-transform">
@@ -159,6 +160,7 @@ export default function AdminLayout() {
             WebkitBackdropFilter: 'saturate(180%) blur(24px)',
             borderTop: '1px solid rgba(255,255,255,0.10)',
             paddingBottom: 'env(safe-area-inset-bottom, 8px)',
+            touchAction: 'none',
           }}
         >
           {navItems.map(({ to, label, icon: Icon }) => (
