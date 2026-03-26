@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
 import type { Bloqueo, Propiedad, Reserva } from '../../types/database'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getFestivos } from '../../lib/festivos'
-import { navyGlassStyle } from '../../lib/styles'
 import QuickReservaPanel from '../../components/admin/QuickReservaPanel'
 
 const COLORES = [

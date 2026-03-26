@@ -4,7 +4,9 @@
       "Bash(npm install:*)",
       "Bash(npx tailwindcss:*)",
       "Bash(npm run:*)",
-      "WebFetch(domain:cuatrocasas.co)"
+      "WebFetch(domain:cuatrocasas.co)",
+      "Bash(npx pwa-assets-generator:*)",
+      "Bash(vercel --version)"
     ]
   }
 }

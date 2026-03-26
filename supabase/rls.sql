@@ -73,6 +73,14 @@ CREATE POLICY "admin gestiona bloqueos" ON bloqueos
   FOR ALL USING (true) WITH CHECK (true);
 
 -- ────────────────────────────────────────────────────────────
+-- GASTOS
+-- ────────────────────────────────────────────────────────────
+ALTER TABLE gastos ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "admin gestiona gastos" ON gastos
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- ────────────────────────────────────────────────────────────
 -- STORAGE: bucket fotos-propiedades
 -- ────────────────────────────────────────────────────────────
 INSERT INTO storage.buckets (id, name, public)

@@ -197,3 +197,22 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mostrar_tiktok     BOOLEAN NOT NULL
 
 -- Eliminar whatsapp por propiedad (se usa el teléfono de empresa)
 ALTER TABLE propiedades DROP COLUMN IF EXISTS whatsapp;
+
+-- ────────────────────────────────────────────────────────────
+-- GASTOS
+-- Costos operativos del tenant (aseo, mantenimiento, etc.)
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE gastos (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id    UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  propiedad_id UUID REFERENCES propiedades(id) ON DELETE SET NULL,
+  categoria    TEXT NOT NULL DEFAULT 'otro'
+                 CHECK (categoria IN ('aseo','mantenimiento','reparacion','servicios','impuestos','otro')),
+  monto        NUMERIC(12,2) NOT NULL,
+  fecha        DATE NOT NULL DEFAULT CURRENT_DATE,
+  nota         TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_gastos_tenant ON gastos(tenant_id);
+CREATE INDEX idx_gastos_fecha  ON gastos(tenant_id, fecha);

@@ -77,6 +77,19 @@ export interface Reserva {
   updated_at: string
 }
 
+export type CategoriaGasto = 'aseo' | 'mantenimiento' | 'reparacion' | 'servicios' | 'impuestos' | 'otro'
+
+export interface Gasto {
+  id: string
+  tenant_id: string
+  propiedad_id: string | null
+  categoria: CategoriaGasto
+  monto: number
+  fecha: string
+  nota: string | null
+  created_at: string
+}
+
 export interface Bloqueo {
   id: string
   propiedad_id: string
@@ -129,6 +142,11 @@ export interface Database {
         Row: Bloqueo
         Insert: Omit<Bloqueo, 'id' | 'created_at'>
         Update: Partial<Omit<Bloqueo, 'id' | 'created_at'>>
+      }
+      gastos: {
+        Row: Gasto
+        Insert: Omit<Gasto, 'id' | 'created_at'>
+        Update: Partial<Omit<Gasto, 'id' | 'created_at'>>
       }
     }
     Functions: {
