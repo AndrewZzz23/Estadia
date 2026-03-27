@@ -104,15 +104,28 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      {/* ── CONTENIDO MOBILE: flex-col con header y nav fuera del scroll ── */}
-      <div className="md:hidden flex-1 min-h-0 flex flex-col">
+      {/* ── CONTENIDO MOBILE: contenedor relativo, bars absolutas sobre el scroll ── */}
+      <div className="md:hidden flex-1 min-h-0 relative overflow-hidden" style={{ backgroundColor: '#101820' }}>
 
-        {/* Top bar — fuera del scroll, siempre fija */}
+        {/* Scroll area — ocupa todo, padding para que el contenido no quede bajo las bars */}
+        <main
+          className="absolute inset-0 overflow-y-auto"
+          style={{
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
+            overscrollBehavior: 'none',
+            backgroundColor: '#EEF0F4',
+          }}
+        >
+          <Outlet />
+        </main>
+
+        {/* Top bar — absolute encima del scroll */}
         <div
-          className="flex-shrink-0 flex items-center gap-3 px-4 pb-3"
+          className="absolute top-0 left-0 right-0 z-10 flex items-center gap-3 px-4 pb-3"
           style={{
             paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
-            background: 'rgba(16,24,32,0.82)',
+            background: 'rgba(16,24,32,0.55)',
             backdropFilter: 'saturate(180%) blur(24px)',
             WebkitBackdropFilter: 'saturate(180%) blur(24px)',
             borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -143,19 +156,11 @@ export default function AdminLayout() {
           <img src={logoIcon} alt="Estadia" className="w-5 h-5 opacity-30 flex-shrink-0" />
         </div>
 
-        {/* Scroll area */}
-        <main
-          className="flex-1 overflow-y-auto"
-          style={{ overscrollBehavior: 'none', backgroundColor: '#EEF0F4' }}
-        >
-          <Outlet />
-        </main>
-
-        {/* Bottom nav — fuera del scroll, siempre fija */}
+        {/* Bottom nav — absolute encima del scroll */}
         <nav
-          className="flex-shrink-0 flex items-center rounded-t-3xl"
+          className="absolute bottom-0 left-0 right-0 z-10 flex items-center rounded-t-3xl"
           style={{
-            background: 'rgba(16,24,32,0.82)',
+            background: 'rgba(16,24,32,0.55)',
             backdropFilter: 'saturate(180%) blur(24px)',
             WebkitBackdropFilter: 'saturate(180%) blur(24px)',
             borderTop: '1px solid rgba(255,255,255,0.10)',
