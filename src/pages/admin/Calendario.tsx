@@ -262,21 +262,28 @@ export default function Calendario() {
           {/* ── Grilla del mes ── */}
           <div className="flex-1 flex flex-col min-w-0">
 
-            {/* Filtro + hint encima del calendario */}
-            <div className="flex items-center justify-end gap-2 mb-1">
-              <select
-                value={filtroProp}
-                onChange={e => setFiltroProp(e.target.value)}
-                className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
-              >
-                <option value="todas">Todas las propiedades</option>
-                {propiedades.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
+            {/* Filtro + hint — misma fila */}
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <p className="text-[11px] text-gray-400 flex items-center gap-1">
+                <span className="text-sm leading-none">👆</span>
+                Toca un día para reservar
+              </p>
+              {propiedades.length > 1 && (
+                <select
+                  value={filtroProp}
+                  onChange={e => setFiltroProp(e.target.value)}
+                  className="text-xs font-medium rounded-xl px-3 py-1.5 focus:outline-none appearance-none cursor-pointer"
+                  style={{
+                    background: 'rgba(30,62,80,0.08)',
+                    border: '1px solid rgba(30,62,80,0.15)',
+                    color: '#1E3E50',
+                  }}
+                >
+                  <option value="todas">Todas las propiedades</option>
+                  {propiedades.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                </select>
+              )}
             </div>
-            <p className="text-xs text-gray-400 flex items-center gap-1.5 mb-2">
-              <span className="text-base leading-none">👆</span>
-              Toca un día para crear una reserva
-            </p>
 
           <div className="relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
             {loadingMes && (

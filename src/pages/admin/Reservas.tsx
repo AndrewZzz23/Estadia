@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
 import type { EstadoReserva, Propiedad, Reserva } from '../../types/database'
-import { Pencil, Trash2, CheckCircle, XCircle, CalendarClock, Users } from 'lucide-react'
+import { Pencil, Trash2, CheckCircle, XCircle, CalendarClock, Users, Check, Ban } from 'lucide-react'
 import ConfirmModal from '../../components/admin/ConfirmModal'
 import QuickReservaPanel from '../../components/admin/QuickReservaPanel'
 import { navyGlassStyle } from '../../lib/styles'
@@ -12,10 +12,22 @@ interface ReservaConPropiedad extends Reserva {
   propiedades: Pick<Propiedad, 'id' | 'nombre'>
 }
 
-const BADGE: Record<EstadoReserva, string> = {
-  confirmada: 'bg-emerald-100 text-emerald-700',
-  completada: 'bg-gray-100 text-gray-500',
-  cancelada:  'bg-red-50 text-red-500',
+const BADGE: Record<EstadoReserva, { cls: string; label: string; icon: React.ReactNode }> = {
+  confirmada: { cls: 'bg-emerald-100 text-emerald-700',          label: 'Confirmada', icon: null },
+  completada: { cls: 'bg-teal-600 text-white',                   label: 'Completada', icon: <Check size={10} /> },
+  cancelada:  { cls: 'bg-red-500 text-white',                    label: 'Cancelada',  icon: <Ban  size={10} /> },
+}
+
+const CARD_ACCENT: Record<EstadoReserva, string> = {
+  confirmada: 'border-l-4 border-l-emerald-400',
+  completada: 'border-l-4 border-l-teal-500',
+  cancelada:  'border-l-4 border-l-red-400',
+}
+
+const CARD_BG: Record<EstadoReserva, string> = {
+  confirmada: 'bg-white',
+  completada: 'bg-teal-50/60',
+  cancelada:  'bg-red-50/60',
 }
 
 function fmt(fecha: string) {
@@ -128,7 +140,7 @@ export default function Reservas() {
       ) : (
         <div className="space-y-2">
           {lista.map(r => (
-            <div key={r.id} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+            <div key={r.id} className={`rounded-2xl shadow-sm overflow-hidden border border-gray-100 ${CARD_BG[r.estado]} ${CARD_ACCENT[r.estado]}`}>
 
               {/* Bloque info */}
               <div className="flex items-center gap-3 px-4 py-3">
@@ -139,8 +151,9 @@ export default function Reservas() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold text-gray-800 truncate">{r.cliente_nombre}</p>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${BADGE[r.estado]}`}>
-                      {r.estado}
+                    <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0 ${BADGE[r.estado].cls}`}>
+                      {BADGE[r.estado].icon}
+                      {BADGE[r.estado].label}
                     </span>
                   </div>
                   <p className="text-xs text-gray-400 truncate">{r.propiedades?.nombre}</p>
@@ -161,7 +174,7 @@ export default function Reservas() {
                 <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
                   {r.estado === 'confirmada' && (
                     <button onClick={() => cambiarEstado(r.id, 'completada')}
-                      className="p-1.5 rounded-lg text-gray-300 hover:text-emerald-500 hover:bg-emerald-50 transition-colors" title="Completar">
+                      className="p-1.5 rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors" title="Completar">
                       <CheckCircle size={15} />
                     </button>
                   )}
@@ -183,7 +196,7 @@ export default function Reservas() {
               </div>
 
               {/* Bloque fechas + acciones — móvil */}
-              <div className="sm:hidden flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-t border-gray-100">
+              <div className="sm:hidden flex items-center gap-2 px-4 py-2.5 border-t border-black/5" style={{ background: 'rgba(0,0,0,0.03)' }}>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-500">
                     {fmt(r.fecha_inicio)} → {fmt(r.fecha_fin)} · {r.noches} noche{r.noches !== 1 ? 's' : ''}
@@ -195,7 +208,7 @@ export default function Reservas() {
                 <div className="flex items-center gap-1">
                   {r.estado === 'confirmada' && (
                     <button onClick={() => cambiarEstado(r.id, 'completada')}
-                      className="p-2 rounded-xl text-gray-300 hover:text-emerald-500 hover:bg-emerald-50 transition-colors">
+                      className="p-2 rounded-xl bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors">
                       <CheckCircle size={16} />
                     </button>
                   )}

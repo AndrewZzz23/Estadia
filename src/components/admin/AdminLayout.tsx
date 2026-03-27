@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Home, CalendarCheck, CalendarDays, LogOut, ChevronRight, Settings } from 'lucide-react'
+import { LayoutDashboard, Home, CalendarCheck, CalendarDays, LogOut, ChevronRight, Settings, User } from 'lucide-react'
 import { useTenant } from '../../contexts/TenantContext'
 import Logo from '../Logo'
 import logoIcon from '../../assets/estadia-icon.svg'
@@ -16,11 +16,24 @@ export default function AdminLayout() {
   const { tenant, logout } = useTenant()
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(true)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   function handleLogout() {
     logout()
     navigate('/admin')
   }
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function handler(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
 
   return (
     <div className="h-screen bg-[#EEF0F4] flex flex-col md:flex-row">
@@ -132,28 +145,64 @@ export default function AdminLayout() {
             touchAction: 'none',
           }}
         >
-          <Link to="/admin/empresa" className="relative flex-shrink-0 active:scale-95 transition-transform">
-            {tenant?.logo_url ? (
-              <div className="w-9 h-9 rounded-full overflow-hidden border border-white/20">
-                <img src={tenant.logo_url} alt={tenant.nombre} className="w-full h-full object-cover" />
+          <div ref={menuRef} className="relative flex-shrink-0">
+            <button
+              onClick={() => setMenuOpen(v => !v)}
+              className="relative active:scale-95 transition-transform"
+            >
+              {tenant?.logo_url ? (
+                <div className="w-9 h-9 rounded-full overflow-hidden border border-white/20">
+                  <img src={tenant.logo_url} alt={tenant.nombre} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">{tenant?.nombre?.charAt(0)}</span>
+                </div>
+              )}
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
+                style={{ background: '#2A7A68', boxShadow: '0 0 0 1.5px rgba(16,24,32,0.9)' }}>
+                <Settings size={8} className="text-white" />
               </div>
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
-                <span className="text-white text-sm font-bold">{tenant?.nombre?.charAt(0)}</span>
+            </button>
+
+            {/* Dropdown menu */}
+            {menuOpen && (
+              <div
+                className="absolute top-12 left-0 z-50 rounded-2xl overflow-hidden min-w-[180px]"
+                style={{
+                  background: 'rgba(16,24,32,0.92)',
+                  backdropFilter: 'saturate(180%) blur(20px)',
+                  WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                }}
+              >
+                <Link
+                  to="/admin/empresa"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition-colors text-sm"
+                >
+                  <User size={15} />
+                  Perfil y configuración
+                </Link>
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} />
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-red-400/80 hover:text-red-400 hover:bg-white/10 transition-colors text-sm"
+                >
+                  <LogOut size={15} />
+                  Cerrar sesión
+                </button>
               </div>
             )}
-            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
-              style={{ background: '#2A7A68', boxShadow: '0 0 0 1.5px rgba(16,24,32,0.9)' }}>
-              <Settings size={8} className="text-white" />
-            </div>
-          </Link>
+          </div>
 
           <div className="flex-1 min-w-0">
             <p className="text-white text-sm font-semibold leading-tight truncate">{tenant?.nombre}</p>
             <p className="text-[10px] font-medium" style={{ color: '#64B5A0' }}>Panel admin</p>
           </div>
 
-          <img src={logoIcon} alt="Estadia" className="w-5 h-5 opacity-30 flex-shrink-0" />
+          <img src={logoIcon} alt="Estadia" className="w-7 h-7 opacity-60 flex-shrink-0" />
         </div>
 
         {/* Bottom nav — absolute encima del scroll */}

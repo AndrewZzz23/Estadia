@@ -7,6 +7,8 @@ import { getFestivos } from '../../lib/festivos'
 import { navyGlassStyle } from '../../lib/styles'
 import QuickReservaPanel from '../../components/admin/QuickReservaPanel'
 import GastoPanel from '../../components/admin/GastoPanel'
+import GastosHistorialPanel from '../../components/admin/GastosHistorialPanel'
+import IngresosHistorialPanel from '../../components/admin/IngresosHistorialPanel'
 import type { CSSProperties } from 'react'
 
 const cardStyles: CSSProperties[] = [
@@ -77,7 +79,9 @@ export default function Dashboard() {
   const [semanaRes, setSemanaRes]       = useState<{ propiedad_id: string; fecha_inicio: string; fecha_fin: string; cliente_nombre: string }[]>([])
   const [loading, setLoading]           = useState(true)
   const [panelOpen, setPanelOpen]       = useState(false)
-  const [gastoOpen, setGastoOpen]       = useState(false)
+  const [gastoOpen, setGastoOpen]             = useState(false)
+  const [gastosHistorialOpen, setGastosHistorialOpen]     = useState(false)
+  const [ingresosHistorialOpen, setIngresosHistorialOpen] = useState(false)
 
   useEffect(() => {
     if (!tenant) return
@@ -107,7 +111,7 @@ export default function Dashboard() {
       ] = await Promise.all([
         supabase.from('propiedades').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant!.id).eq('activa', true),
         supabase.from('reservas').select('*', { count: 'exact', head: true }).in('propiedad_id', ids).eq('estado', 'confirmada').gte('fecha_fin', hoy),
-        supabase.from('reservas').select('monto_total').in('propiedad_id', ids).eq('estado', 'confirmada').gte('created_at', inicioMes),
+        supabase.from('reservas').select('monto_total').in('propiedad_id', ids).in('estado', ['confirmada', 'completada']).gte('created_at', inicioMes),
         supabase.from('reservas').select('id, cliente_nombre, fecha_inicio, fecha_fin, noches, monto_total, propiedad_id')
           .in('propiedad_id', ids).eq('estado', 'confirmada').gte('fecha_fin', hoy)
           .order('fecha_inicio').limit(5),
@@ -198,17 +202,41 @@ export default function Dashboard() {
 
           {/* ── Métricas ── */}
           <div className="grid grid-cols-2 gap-3 mb-3">
-            {cards.map(({ label, value, icon: Icon, styleIdx }) => (
-              <div key={label} className="rounded-2xl p-4 flex flex-col gap-3" style={cardStyles[styleIdx]}>
-                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Icon size={15} className="text-white" />
+            {cards.map(({ label, value, icon: Icon, styleIdx }) => {
+              const onClick =
+                label === 'Gastos este mes'   ? () => setGastosHistorialOpen(true) :
+                label === 'Ingresos este mes' ? () => setIngresosHistorialOpen(true) : null
+
+              return onClick ? (
+                <button
+                  key={label}
+                  onClick={onClick}
+                  className="rounded-2xl p-4 flex flex-col gap-3 text-left active:scale-95 transition-transform"
+                  style={cardStyles[styleIdx]}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+                      <Icon size={15} className="text-white" />
+                    </div>
+                    <span className="text-[10px] text-white/60 font-medium">Ver historial →</span>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium text-white/70">{label}</p>
+                    <p className="text-2xl font-bold leading-tight text-white">{value}</p>
+                  </div>
+                </button>
+              ) : (
+                <div key={label} className="rounded-2xl p-4 flex flex-col gap-3" style={cardStyles[styleIdx]}>
+                  <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+                    <Icon size={15} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium text-white/70">{label}</p>
+                    <p className="text-2xl font-bold leading-tight text-white">{value}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[11px] font-medium text-white/70">{label}</p>
-                  <p className="text-2xl font-bold leading-tight text-white">{value}</p>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* ── Mini semana ── */}
@@ -320,25 +348,40 @@ export default function Dashboard() {
           </div>
 
           {/* ── Accesos rápidos ── */}
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: 'Nueva reserva',   onClick: () => setPanelOpen(true), icon: CalendarCheck },
-              { label: 'Registrar gasto', onClick: () => setGastoOpen(true), icon: Receipt       },
-            ].map(({ label, onClick, icon: Icon }) => (
-              <button key={label} onClick={onClick}
-                className="flex flex-col items-center gap-2 bg-white rounded-2xl py-4 shadow-sm hover:shadow-md transition-shadow">
-                <div className="w-9 h-9 rounded-xl bg-[#2A7A68]/10 flex items-center justify-center">
-                  <Icon size={16} className="text-[#2A7A68]" />
-                </div>
-                <span className="text-[11px] font-medium text-gray-500 text-center leading-tight">{label}</span>
-              </button>
-            ))}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setPanelOpen(true)}
+              className="flex items-center gap-3 px-4 py-4 rounded-2xl active:scale-95 transition-transform text-left"
+              style={{
+                background: 'linear-gradient(135deg, #1E3E50 0%, #2A7A68 100%)',
+                boxShadow: '0 4px 16px rgba(30,62,80,0.35)',
+              }}
+            >
+              <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+                <CalendarCheck size={18} className="text-white" />
+              </div>
+              <span className="text-sm font-semibold text-white leading-tight">Nueva reserva</span>
+            </button>
+
+            <button
+              onClick={() => setGastoOpen(true)}
+              className="flex items-center gap-3 px-4 py-4 rounded-2xl active:scale-95 transition-transform text-left"
+              style={{
+                background: 'linear-gradient(135deg, #7C3A2A 0%, #C4693A 100%)',
+                boxShadow: '0 4px 16px rgba(196,105,58,0.35)',
+              }}
+            >
+              <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+                <Receipt size={18} className="text-white" />
+              </div>
+              <span className="text-sm font-semibold text-white leading-tight">Registrar gasto</span>
+            </button>
           </div>
 
           {/* Backdrop + Panels */}
-          {(panelOpen || gastoOpen) && (
+          {(panelOpen || gastoOpen || gastosHistorialOpen || ingresosHistorialOpen) && (
             <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
-              onClick={() => { setPanelOpen(false); setGastoOpen(false) }} />
+              onClick={() => { setPanelOpen(false); setGastoOpen(false); setGastosHistorialOpen(false); setIngresosHistorialOpen(false) }} />
           )}
           <QuickReservaPanel
             open={panelOpen}
@@ -349,6 +392,14 @@ export default function Dashboard() {
             open={gastoOpen}
             onClose={() => setGastoOpen(false)}
             onCreated={() => { setGastoOpen(false); }}
+          />
+          <GastosHistorialPanel
+            open={gastosHistorialOpen}
+            onClose={() => setGastosHistorialOpen(false)}
+          />
+          <IngresosHistorialPanel
+            open={ingresosHistorialOpen}
+            onClose={() => setIngresosHistorialOpen(false)}
           />
         </>
       )}
