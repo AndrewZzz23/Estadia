@@ -113,28 +113,38 @@ export default function TenantHome() {
       {/* ── HERO ── */}
       {(t.foto_portada || (propiedades.length > 0 && fotoPrincipal(propiedades[0]))) ? (
         <div className="relative h-[90vh] min-h-[560px] overflow-hidden">
-          {/* Video o imagen de portada del tenant, si no: foto de la primera propiedad */}
-          {t.foto_portada && youtubeEmbed(t.foto_portada) ? (
-            <iframe
-              src={youtubeEmbed(t.foto_portada)!}
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ border: 'none', transform: 'scale(1.5)', transformOrigin: 'center' }}
-              allow="autoplay; encrypted-media"
-              allowFullScreen={false}
-            />
-          ) : t.foto_portada && esVideoDirecto(t.foto_portada) ? (
-            <video
-              src={t.foto_portada}
-              className="absolute inset-0 w-full h-full object-cover"
-              autoPlay muted loop playsInline
-            />
-          ) : (
-            <img
-              src={t.foto_portada ?? fotoPrincipal(propiedades[0])!}
-              alt={t.nombre}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+
+          {/* ── Portada móvil (vertical) — solo en pantallas < sm ── */}
+          {(t as any).portada_movil && (
+            <div className="block sm:hidden absolute inset-0">
+              {esVideoDirecto((t as any).portada_movil) ? (
+                <video src={(t as any).portada_movil} className="absolute inset-0 w-full h-full object-cover" autoPlay muted loop playsInline />
+              ) : (
+                <img src={(t as any).portada_movil} alt={t.nombre} className="absolute inset-0 w-full h-full object-cover" />
+              )}
+            </div>
           )}
+
+          {/* ── Portada escritorio (horizontal) — siempre visible, oculta en móvil si hay portada móvil ── */}
+          <div className={`${(t as any).portada_movil ? 'hidden sm:block' : 'block'} absolute inset-0`}>
+            {t.foto_portada && youtubeEmbed(t.foto_portada) ? (
+              <iframe
+                src={youtubeEmbed(t.foto_portada)!}
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                style={{ border: 'none', transform: 'scale(1.5)', transformOrigin: 'center' }}
+                allow="autoplay; encrypted-media"
+                allowFullScreen={false}
+              />
+            ) : t.foto_portada && esVideoDirecto(t.foto_portada) ? (
+              <video src={t.foto_portada} className="absolute inset-0 w-full h-full object-cover" autoPlay muted loop playsInline />
+            ) : (
+              <img
+                src={t.foto_portada ?? fotoPrincipal(propiedades[0])!}
+                alt={t.nombre}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
+          </div>
           <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/75" />
           <div className="absolute inset-0 flex flex-col justify-end px-4 pb-6 sm:pl-8 sm:pb-8">
             <div

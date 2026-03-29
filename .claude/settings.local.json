@@ -6,7 +6,9 @@
       "Bash(npm run:*)",
       "WebFetch(domain:cuatrocasas.co)",
       "Bash(npx pwa-assets-generator:*)",
-      "Bash(vercel --version)"
+      "Bash(vercel --version)",
+      "Bash(./supabase.exe login:*)",
+      "Bash(./supabase.exe link:*)"
     ]
   }
 }

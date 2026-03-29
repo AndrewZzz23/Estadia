@@ -31,13 +31,13 @@ type FormData = {
   latitud: number | null; longitud: number | null
   precio_noche: string; precio_semana: string; precio_mes: string
   capacidad: string; habitaciones: string; banos: string
-  amenidades: string[]; activa: boolean
+  amenidades: string[]; activa: boolean; ical_url: string
 }
 
 const EMPTY: FormData = {
   nombre: '', descripcion: '', ubicacion: '', latitud: null, longitud: null,
   precio_noche: '', precio_semana: '', precio_mes: '',
-  capacidad: '', habitaciones: '', banos: '', amenidades: [], activa: true,
+  capacidad: '', habitaciones: '', banos: '', amenidades: [], activa: true, ical_url: '',
 }
 
 function numOrNull(v: string) {
@@ -110,6 +110,7 @@ export default function PropiedadFormPanel({ open, propiedadId, onClose, onSaved
               banos:         p.banos?.toString() ?? '',
               amenidades:    p.amenidades ?? [],
               activa:        p.activa,
+              ical_url:      p.ical_url ?? '',
             })
           }
           setLoading(false)
@@ -151,6 +152,7 @@ export default function PropiedadFormPanel({ open, propiedadId, onClose, onSaved
       banos:         numOrNull(form.banos),
       amenidades:    form.amenidades,
       activa:        form.activa,
+      ical_url:      form.ical_url.trim() || null,
     }
 
     if (esEdicion) {
@@ -309,6 +311,23 @@ export default function PropiedadFormPanel({ open, propiedadId, onClose, onSaved
               {!editId && !esEdicion && (
                 <p className="text-xs text-gray-400 px-1">Podrás subir fotos después de guardar.</p>
               )}
+
+              {/* Integraciones iCal */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm">
+                <Sec>Integraciones</Sec>
+                <Field label="URL iCal de Airbnb / Booking">
+                  <input
+                    className={inp}
+                    type="url"
+                    placeholder="https://www.airbnb.com/calendar/ical/..."
+                    value={form.ical_url}
+                    onChange={e => set('ical_url', e.target.value)}
+                  />
+                </Field>
+                <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
+                  En Airbnb: Calendario → Disponibilidad → Exportar calendario. Pega la URL aquí para sincronizar bloqueos automáticamente.
+                </p>
+              </div>
 
               {error && <p className="text-xs text-red-500 bg-red-50 px-4 py-2.5 rounded-xl">{error}</p>}
 

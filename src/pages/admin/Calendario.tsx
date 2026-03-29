@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
 import type { Bloqueo, Propiedad, Reserva } from '../../types/database'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import airbnbLogo from '../../assets/airbnb.png'
 import { getFestivos } from '../../lib/festivos'
 import QuickReservaPanel from '../../components/admin/QuickReservaPanel'
 
@@ -29,6 +30,7 @@ interface Evento {
   fecha_fin: string
   label: string
   colorIdx: number
+  ical_uid: string | null
 }
 
 export default function Calendario() {
@@ -42,6 +44,8 @@ export default function Calendario() {
   const [loading, setLoading] = useState(true)
   const [loadingMes, setLoadingMes] = useState(false)
   const [festivoActivo, setFestivoActivo] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState<string | null>(null)
   const [tooltip, setTooltip] = useState<{ day: string; x: number; y: number } | null>(null)
   const [dayModal, setDayModal]   = useState<string | null>(null)
   const [quickOpen, setQuickOpen] = useState(false)
@@ -88,7 +92,7 @@ export default function Calendario() {
         .in('propiedad_id', ids).neq('estado','cancelada')
         .lte('fecha_inicio', hasta).gte('fecha_fin', desde),
       supabase.from('bloqueos')
-        .select('id, propiedad_id, fecha_inicio, fecha_fin, motivo')
+        .select('id, propiedad_id, fecha_inicio, fecha_fin, motivo, ical_uid')
         .in('propiedad_id', ids)
         .lte('fecha_inicio', hasta).gte('fecha_fin', desde),
     ])
@@ -98,13 +102,14 @@ export default function Calendario() {
         id: r.id, tipo: 'reserva' as const,
         propiedad_id: r.propiedad_id,
         fecha_inicio: r.fecha_inicio, fecha_fin: r.fecha_fin,
-        label: r.cliente_nombre, colorIdx: colorMap[r.propiedad_id] ?? 0,
+        label: r.cliente_nombre, colorIdx: colorMap[r.propiedad_id] ?? 0, ical_uid: null,
       })),
       ...((bloqueos as Bloqueo[]) ?? []).map(b => ({
         id: b.id, tipo: 'bloqueo' as const,
         propiedad_id: b.propiedad_id,
         fecha_inicio: b.fecha_inicio, fecha_fin: b.fecha_fin,
         label: b.motivo ?? 'Bloqueado', colorIdx: colorMap[b.propiedad_id] ?? 0,
+        ical_uid: b.ical_uid ?? null,
       })),
     ])
     setLoading(false)
@@ -135,6 +140,32 @@ export default function Calendario() {
   function navMes(delta: number) {
     const d = new Date(year, month + delta, 1)
     setYear(d.getFullYear()); setMonth(d.getMonth())
+  }
+
+  async function sincronizarIcal() {
+    setSyncing(true)
+    setSyncMsg(null)
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-ical`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({}),
+        }
+      )
+      const data = await res.json()
+      setSyncMsg(`✓ ${data.synced ?? 0} eventos sincronizados`)
+      await cargar()
+    } catch {
+      setSyncMsg('Error al sincronizar')
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncMsg(null), 4000)
+    }
   }
 
   function irAFestivo(dateStr: string) {
@@ -262,27 +293,46 @@ export default function Calendario() {
           {/* ── Grilla del mes ── */}
           <div className="flex-1 flex flex-col min-w-0">
 
-            {/* Filtro + hint — misma fila */}
-            <div className="flex items-center justify-between gap-2 mb-2">
+            {/* Filtro + hint + sync — misma fila */}
+            <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
               <p className="text-[11px] text-gray-400 flex items-center gap-1">
                 <span className="text-sm leading-none">👆</span>
                 Toca un día para reservar
               </p>
-              {propiedades.length > 1 && (
-                <select
-                  value={filtroProp}
-                  onChange={e => setFiltroProp(e.target.value)}
-                  className="text-xs font-medium rounded-xl px-3 py-1.5 focus:outline-none appearance-none cursor-pointer"
+              <div className="flex items-center gap-2 ml-auto">
+                {syncMsg && (
+                  <span className="text-[11px] text-[#2A7A68] font-medium">{syncMsg}</span>
+                )}
+                <button
+                  onClick={sincronizarIcal}
+                  disabled={syncing}
+                  title="Sincronizar con Airbnb / Booking"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:brightness-105 active:scale-95 disabled:opacity-50"
                   style={{
                     background: 'rgba(30,62,80,0.08)',
                     border: '1px solid rgba(30,62,80,0.15)',
                     color: '#1E3E50',
                   }}
                 >
-                  <option value="todas">Todas las propiedades</option>
-                  {propiedades.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                </select>
-              )}
+                  <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
+                  {syncing ? 'Sincronizando…' : 'Sincronizar'}
+                </button>
+                {propiedades.length > 1 && (
+                  <select
+                    value={filtroProp}
+                    onChange={e => setFiltroProp(e.target.value)}
+                    className="text-xs font-medium rounded-xl px-3 py-1.5 focus:outline-none appearance-none cursor-pointer"
+                    style={{
+                      background: 'rgba(30,62,80,0.08)',
+                      border: '1px solid rgba(30,62,80,0.15)',
+                      color: '#1E3E50',
+                    }}
+                  >
+                    <option value="todas">Todas las propiedades</option>
+                    {propiedades.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                  </select>
+                )}
+              </div>
             </div>
 
           <div className="relative bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
@@ -432,17 +482,29 @@ export default function Calendario() {
                       {evs.slice(0, 2).map((ev, evIdx) => {
                         const color    = COLORES[ev.colorIdx]
                         const esInicio = ymd(dia) === ev.fecha_inicio
+                        const esAirbnb = ev.tipo === 'bloqueo' && !!ev.ical_uid
+                        const propNombre = propiedades.find(p => p.id === ev.propiedad_id)?.nombre ?? ''
                         return (
                           <div
                             key={ev.id}
                             className={`w-full text-left text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-px sm:py-0.5 rounded-md truncate font-medium leading-[14px] sm:leading-4
                               ${evIdx === 1 ? 'hidden sm:block' : ''}
-                              ${ev.tipo === 'bloqueo'
-                                ? 'bg-gray-100 text-gray-500'
-                                : `${color.bg} ${color.text} opacity-90`}`}
-                            title={ev.label}
+                              ${!esAirbnb ? (ev.tipo === 'bloqueo' ? 'bg-gray-100 text-gray-500' : `${color.bg} ${color.text} opacity-90`) : ''}`}
+                            style={esAirbnb ? {
+                              background: 'linear-gradient(90deg, rgba(255,90,95,0.15), rgba(255,90,95,0.08))',
+                              border: '1px solid rgba(255,90,95,0.3)',
+                              color: '#e0484d',
+                            } : undefined}
+                            title={esAirbnb ? propNombre : ev.label}
                           >
-                            {esInicio ? ev.label : <span className="opacity-0">·</span>}
+                            {esInicio ? (
+                              esAirbnb ? (
+                                <span className="flex items-center gap-0.5">
+                                  <img src={airbnbLogo} alt="Airbnb" className="w-2.5 h-2.5 flex-shrink-0" />
+                                  <span className="truncate">{propNombre}</span>
+                                </span>
+                              ) : ev.label
+                            ) : <span className="opacity-0">·</span>}
                           </div>
                         )
                       })}
@@ -475,6 +537,10 @@ export default function Calendario() {
                 ))}
                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
                   <span className="w-2 h-2 rounded-full bg-gray-300" />Bloqueo
+                </div>
+                <div className="flex items-center gap-1.5 text-xs" style={{ color: '#FF5A5F' }}>
+                  <img src={airbnbLogo} alt="Airbnb" className="w-3 h-3" />
+                  Airbnb
                 </div>
               </div>
             )}
@@ -536,10 +602,16 @@ export default function Calendario() {
                         border: '1px solid rgba(0,0,0,0.05)',
                       }}
                     >
-                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${ev.tipo === 'bloqueo' ? 'bg-gray-300' : color.bg}`} />
+                      {ev.ical_uid ? (
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,90,95,0.12)' }}>
+                          <img src={airbnbLogo} alt="Airbnb" className="w-4 h-4" />
+                        </div>
+                      ) : (
+                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${ev.tipo === 'bloqueo' ? 'bg-gray-300' : color.bg}`} />
+                      )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">{ev.label}</p>
-                        <p className="text-xs text-gray-400">{prop?.nombre ?? '—'} · {ev.tipo === 'bloqueo' ? 'Bloqueo' : 'Reserva'}</p>
+                        <p className="text-sm font-medium text-gray-800 truncate">{ev.ical_uid ? prop?.nombre ?? ev.label : ev.label}</p>
+                        <p className="text-xs text-gray-400">{prop?.nombre ?? '—'} · {ev.ical_uid ? 'Airbnb' : ev.tipo === 'bloqueo' ? 'Bloqueo' : 'Reserva'}</p>
                       </div>
                       {ev.tipo === 'reserva' && (
                         <Link
@@ -619,8 +691,12 @@ export default function Calendario() {
                   const color = COLORES[ev.colorIdx]
                   return (
                     <div key={ev.id} className="flex items-center gap-2">
-                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ev.tipo === 'bloqueo' ? 'bg-gray-300' : color.bg}`} />
-                      <span className="text-[11px] text-gray-700 truncate">{ev.label}</span>
+                      {ev.ical_uid ? (
+                        <img src={airbnbLogo} alt="Airbnb" className="w-2.5 h-2.5 flex-shrink-0" />
+                      ) : (
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ev.tipo === 'bloqueo' ? 'bg-gray-300' : color.bg}`} />
+                      )}
+                      <span className="text-[11px] text-gray-700 truncate">{ev.ical_uid ? (propiedades.find(p => p.id === ev.propiedad_id)?.nombre ?? ev.label) : ev.label}</span>
                       <span className="text-[10px] text-gray-400 ml-auto flex-shrink-0">
                         {propiedades.find(p => p.id === ev.propiedad_id)?.nombre?.split(' ')[0] ?? ''}
                       </span>

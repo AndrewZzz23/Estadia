@@ -26,9 +26,13 @@ export default function Empresa() {
     instagram_url: '', facebook_url: '', tiktok_url: '',
     mostrar_instagram: true, mostrar_facebook: true, mostrar_tiktok: true,
   })
-  const [portada, setPortada]         = useState<string | null>(null)
-  const [subiendo, setSubiendo]       = useState(false)
-  const [errorPortada, setErrorPortada] = useState('')
+  const [portada, setPortada]               = useState<string | null>(null)
+  const [subiendo, setSubiendo]             = useState(false)
+  const [errorPortada, setErrorPortada]     = useState('')
+  const [portadaMovil, setPortadaMovil]     = useState<string | null>(null)
+  const [subiendoMovil, setSubiendoMovil]   = useState(false)
+  const [errorMovil, setErrorMovil]         = useState('')
+  const fileMovilRef = useRef<HTMLInputElement>(null)
   const [logo, setLogo]               = useState<string | null>(null)
   const [subiendoLogo, setSubiendoLogo] = useState(false)
   const [errorLogo, setErrorLogo]     = useState('')
@@ -49,6 +53,7 @@ export default function Empresa() {
         setTenant(data as never)
         const d = data as Record<string, string | null>
         setPortada(d.foto_portada ?? null)
+        setPortadaMovil((d as any).portada_movil ?? null)
         setLogo(d.logo_url ?? null)
         setForm({
           nombre:        d.nombre        ?? '',
@@ -71,6 +76,18 @@ export default function Empresa() {
     setOk(false)
   }
 
+  function storagePath(url: string, bucket: string) {
+    // Extrae el path relativo dentro del bucket desde la URL pública
+    const marker = `/object/public/${bucket}/`
+    const idx = url.indexOf(marker)
+    return idx !== -1 ? url.slice(idx + marker.length) : null
+  }
+
+  async function borrarDelBucket(url: string, bucket: string) {
+    const path = storagePath(url, bucket)
+    if (path) await supabase.storage.from(bucket).remove([path])
+  }
+
   async function handlePortada(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !tenant) return
@@ -83,6 +100,9 @@ export default function Empresa() {
 
     setSubiendo(true)
     setErrorPortada('')
+
+    // Borrar archivo anterior del bucket si existe
+    if (portada) await borrarDelBucket(portada, 'portadas')
 
     const ext  = file.name.split('.').pop()
     const path = `${tenant.id}/portada_${Date.now()}.${ext}`
@@ -119,6 +139,34 @@ export default function Empresa() {
     setGuardandoUrl(false)
   }
 
+  async function handlePortadaMovil(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !tenant) return
+    const esImagen = file.type.startsWith('image/')
+    const esVideo  = file.type.startsWith('video/')
+    if (!esImagen && !esVideo) { setErrorMovil('Solo se permiten imágenes o videos.'); return }
+    if (file.size > 200 * 1024 * 1024) { setErrorMovil('El archivo no debe superar 200 MB.'); return }
+    setSubiendoMovil(true); setErrorMovil('')
+    if (portadaMovil) await borrarDelBucket(portadaMovil, 'portadas')
+    const ext  = file.name.split('.').pop()
+    const path = `${tenant.id}/portada_movil_${Date.now()}.${ext}`
+    const { error: upErr } = await supabase.storage.from('portadas').upload(path, file, { upsert: false })
+    if (upErr) { setErrorMovil('Error al subir. ' + upErr.message); setSubiendoMovil(false); return }
+    const { data: { publicUrl } } = supabase.storage.from('portadas').getPublicUrl(path)
+    await supabase.from('tenants').update({ portada_movil: publicUrl } as never).eq('id', tenant.id)
+    setPortadaMovil(publicUrl)
+    setTenant({ ...tenant, portada_movil: publicUrl } as never)
+    setSubiendoMovil(false)
+  }
+
+  async function quitarPortadaMovil() {
+    if (!tenant) return
+    if (portadaMovil) await borrarDelBucket(portadaMovil, 'portadas')
+    await supabase.from('tenants').update({ portada_movil: null } as never).eq('id', tenant.id)
+    setPortadaMovil(null)
+    setTenant({ ...tenant, portada_movil: null } as never)
+  }
+
   async function handleLogo(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !tenant) return
@@ -145,6 +193,7 @@ export default function Empresa() {
 
   async function quitarPortada() {
     if (!tenant) return
+    if (portada) await borrarDelBucket(portada, 'portadas')
     await supabase.from('tenants').update({ foto_portada: null } as never).eq('id', tenant.id)
     setPortada(null)
     setTenant({ ...tenant, foto_portada: null })
@@ -198,7 +247,10 @@ export default function Empresa() {
         <section className="bg-white border border-gray-100 rounded-xl overflow-hidden">
           <div className="px-5 pt-5 pb-3">
             <h2 className="text-sm font-semibold text-gray-700">Imagen o video de portada</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Aparece como hero en tu página pública. Acepta imágenes o videos (máx. 200 MB).</p>
+            <p className="text-xs text-gray-400 mt-0.5">Acepta imágenes o videos (máx. 200 MB). Si subes una versión móvil, se usará en celulares automáticamente.</p>
+          </div>
+          <div className="px-5 pb-1 flex gap-2">
+            <span className="text-[11px] font-semibold text-gray-500 flex items-center gap-1">🖥️ Escritorio / horizontal</span>
           </div>
 
           {portada ? (
@@ -284,6 +336,60 @@ export default function Empresa() {
               </button>
             </div>
           </div>
+        </section>
+
+        {/* ── PORTADA MÓVIL ── */}
+        <section className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+          <div className="px-5 pt-5 pb-3">
+            <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              📱 Portada móvil / vertical
+            </h2>
+            <p className="text-xs text-gray-400 mt-0.5">Se muestra en celulares en lugar de la portada de escritorio. Formato vertical recomendado (9:16).</p>
+          </div>
+
+          {portadaMovil ? (
+            <div className="relative mx-5 mb-5 rounded-xl overflow-hidden bg-gray-100" style={{ aspectRatio: '9/16', maxHeight: 320 }}>
+              {esVideoDirecto(portadaMovil) ? (
+                <video src={portadaMovil} className="absolute inset-0 w-full h-full object-cover" muted loop autoPlay playsInline />
+              ) : (
+                <img src={portadaMovil} alt="Portada móvil" className="absolute inset-0 w-full h-full object-cover" />
+              )}
+              <div className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-colors group flex items-center justify-center">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                  <button type="button" onClick={() => fileMovilRef.current?.click()}
+                    className="bg-white text-gray-800 font-medium text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 hover:bg-gray-100">
+                    <Upload size={13} /> Cambiar
+                  </button>
+                  <button type="button" onClick={quitarPortadaMovil}
+                    className="bg-red-500 text-white font-medium text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 hover:bg-red-600">
+                    <X size={13} /> Quitar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div onClick={() => fileMovilRef.current?.click()}
+              className="mx-5 mb-5 border-2 border-dashed border-gray-200 hover:border-brand-400 rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors group"
+              style={{ aspectRatio: '9/16', maxHeight: 280 }}
+            >
+              {subiendoMovil ? (
+                <div className="w-7 h-7 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <div className="w-12 h-12 rounded-2xl bg-gray-50 group-hover:bg-brand-50 flex items-center justify-center transition-colors">
+                    <ImagePlus size={22} className="text-gray-400 group-hover:text-brand-500" />
+                  </div>
+                  <div className="text-center px-4">
+                    <p className="text-sm font-medium text-gray-600">Subir imagen o video vertical</p>
+                    <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, MP4, MOV · máx. 200 MB</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <input ref={fileMovilRef} type="file" accept="image/*,video/*" className="hidden" onChange={handlePortadaMovil} />
+          {errorMovil && <p className="text-xs text-red-600 bg-red-50 px-5 py-2 mb-3">{errorMovil}</p>}
         </section>
 
         {/* ── LOGO ── */}

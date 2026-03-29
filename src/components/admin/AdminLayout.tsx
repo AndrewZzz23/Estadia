@@ -125,7 +125,7 @@ export default function AdminLayout() {
           className="absolute inset-0 overflow-y-auto"
           style={{
             paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px)',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)',
             overscrollBehavior: 'none',
             backgroundColor: '#EEF0F4',
           }}
@@ -220,16 +220,16 @@ export default function AdminLayout() {
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink key={to} to={to}
               className={({ isActive }) =>
-                `flex-1 flex flex-col items-center justify-center gap-1 pt-3 pb-2 transition-all ${isActive ? 'text-white' : 'text-white/30'}`
+                `flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1 transition-all ${isActive ? 'text-white' : 'text-white/30'}`
               }
             >
               {({ isActive }) => (
                 <>
-                  <div className="w-10 h-10 flex items-center justify-center rounded-2xl transition-all"
+                  <div className="w-8 h-8 flex items-center justify-center rounded-xl transition-all"
                     style={isActive ? { background: 'rgba(100,181,160,0.22)' } : {}}>
-                    <Icon size={22} style={{ color: isActive ? '#64B5A0' : 'rgba(255,255,255,0.30)' }} />
+                    <Icon size={18} style={{ color: isActive ? '#64B5A0' : 'rgba(255,255,255,0.30)' }} />
                   </div>
-                  <span className="text-[10px] font-medium leading-none"
+                  <span className="text-[9px] font-medium leading-none"
                     style={{ color: isActive ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.28)' }}>
                     {label}
                   </span>

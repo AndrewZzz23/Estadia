@@ -16,6 +16,7 @@ export interface Tenant {
   telefono: string | null
   logo_url: string | null
   foto_portada: string | null
+  portada_movil: string | null
   descripcion: string | null
   slogan: string | null
   instagram_url:     string | null
@@ -47,6 +48,7 @@ export interface Propiedad {
   amenidades: string[]
   activa: boolean
   orden: number
+  ical_url: string | null
   created_at: string
   updated_at: string
 }
@@ -96,6 +98,7 @@ export interface Bloqueo {
   fecha_inicio: string
   fecha_fin: string
   motivo: string | null
+  ical_uid: string | null
   created_at: string
 }
 
