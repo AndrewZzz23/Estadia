@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Home, CalendarCheck, CalendarDays, LogOut, ChevronRight, Settings, User } from 'lucide-react'
+import { LayoutDashboard, Home, CalendarCheck, CalendarDays, LogOut, ChevronRight, Settings, User, Building2 } from 'lucide-react'
 import { useTenant } from '../../contexts/TenantContext'
 import Logo from '../Logo'
 import logoIcon from '../../assets/estadia-icon.svg'
@@ -102,8 +102,24 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        {/* Logout */}
-        <div className={`border-t border-white/10 py-3 ${collapsed ? 'px-2' : 'px-3'}`}>
+        {/* Empresa + Logout */}
+        <div className={`border-t border-white/10 py-3 space-y-0.5 ${collapsed ? 'px-2' : 'px-3'}`}>
+          <NavLink
+            to="/admin/empresa"
+            title={collapsed ? 'Mi empresa' : undefined}
+            className={({ isActive }) =>
+              `flex items-center w-full rounded-lg transition-all ${
+                collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'
+              } ${isActive ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white hover:bg-white/10'}`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <Building2 size={17} className={`flex-shrink-0 ${isActive ? 'text-[#64B5A0]' : ''}`} />
+                {!collapsed && <span className="text-sm">Mi empresa</span>}
+              </>
+            )}
+          </NavLink>
           <button
             onClick={handleLogout}
             title={collapsed ? 'Cerrar sesión' : undefined}

@@ -132,8 +132,7 @@ export default function PropiedadFormPanel({ open, propiedadId, onClose, onSaved
     }))
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
+  async function guardar() {
     if (!tenant) return
     if (!form.nombre.trim()) { setError('El nombre es obligatorio.'); return }
     setGuardando(true); setError('')
@@ -157,17 +156,22 @@ export default function PropiedadFormPanel({ open, propiedadId, onClose, onSaved
 
     if (esEdicion) {
       const { error: err } = await supabase.from('propiedades').update(payload as never).eq('id', propiedadId!)
-      if (err) { setError('Error al guardar.'); setGuardando(false); return }
+      if (err) { setError(`Error al guardar: ${err.message}`); setGuardando(false); return }
       onSaved()
     } else {
       const { data, error: err } = await supabase
         .from('propiedades').insert({ ...payload, tenant_id: tenant.id } as never)
         .select().single()
-      if (err || !data) { setError('Error al crear.'); setGuardando(false); return }
+      if (err || !data) { setError(`Error al crear: ${err?.message}`); setGuardando(false); return }
       setSavedId((data as Propiedad).id)  // cambia a modo edición para mostrar fotos
       onSaved()
     }
     setGuardando(false)
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    guardar()
   }
 
   return (
@@ -340,7 +344,7 @@ export default function PropiedadFormPanel({ open, propiedadId, onClose, onSaved
         {/* Botón guardar — sticky al fondo */}
         <div className="flex-shrink-0 px-4 py-3 border-t border-black/5 bg-[#EEF0F4]">
           <button
-            type="submit" form="prop-panel-form" disabled={guardando || loading}
+            type="button" onClick={guardar} disabled={guardando || loading}
             className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50"
             style={navyGlassStyle}
           >

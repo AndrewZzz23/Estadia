@@ -41,8 +41,6 @@ export default function Empresa() {
   const [ok, setOk]                   = useState(false)
   const [error, setError]             = useState('')
   const [copiado, setCopiado]         = useState(false)
-  const [urlInput, setUrlInput]       = useState('')
-  const [guardandoUrl, setGuardandoUrl] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -125,19 +123,6 @@ export default function Empresa() {
     setSubiendo(false)
   }
 
-  async function guardarUrl() {
-    if (!tenant || !urlInput.trim()) return
-    setGuardandoUrl(true)
-    const url = urlInput.trim()
-    const { error: err } = await supabase
-      .from('tenants').update({ foto_portada: url } as never).eq('id', tenant.id)
-    if (!err) {
-      setPortada(url)
-      setTenant({ ...tenant, foto_portada: url })
-      setUrlInput('')
-    }
-    setGuardandoUrl(false)
-  }
 
   async function handlePortadaMovil(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -314,28 +299,6 @@ export default function Empresa() {
             <p className="text-xs text-red-600 bg-red-50 px-5 py-2 mb-3">{errorPortada}</p>
           )}
 
-          {/* URL externa */}
-          <div className="px-5 pb-5 border-t border-gray-50 pt-4">
-            <p className="text-xs text-gray-400 mb-2">O pega un link de video (YouTube, Drive, Dropbox…)</p>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={urlInput}
-                onChange={e => setUrlInput(e.target.value)}
-                placeholder="https://..."
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-              />
-              <button
-                type="button"
-                onClick={guardarUrl}
-                disabled={!urlInput.trim() || guardandoUrl}
-                className="bg-brand-500 hover:bg-brand-600 disabled:bg-brand-200 text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
-              >
-                <Link size={13} />
-                {guardandoUrl ? 'Guardando…' : 'Usar URL'}
-              </button>
-            </div>
-          </div>
         </section>
 
         {/* ── PORTADA MÓVIL ── */}
