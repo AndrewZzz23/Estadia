@@ -156,38 +156,28 @@ export default function TenantHome() {
           <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/75" />
           <div className="absolute inset-0 flex flex-col justify-end px-4 pb-6 sm:pl-8 sm:pb-8">
             <div
-              className="inline-flex flex-col self-start px-4 py-3 sm:px-6 sm:py-4 rounded-2xl"
+              className="inline-flex flex-col self-start px-4 py-3 sm:px-6 sm:py-5 rounded-2xl"
               style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.3)' }}
             >
-              <h1 className="text-white text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight">
-                {t.nombre}
-              </h1>
-              {t.slogan && (
-                <p className="text-white/65 text-sm font-normal mt-1">
-                  {t.slogan}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Burbujas info */}
-          <div className="absolute top-24 right-4 sm:right-8 flex flex-col gap-2 sm:gap-3">
-            {(() => {
-              const minPrecio = Math.min(...propiedades.filter(p => p.precio_noche).map(p => p.precio_noche!))
-              return isFinite(minPrecio) ? (
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-right">
-                  <p className="text-xs text-white/60 mb-0.5">Desde</p>
-                  <p className="text-lg sm:text-2xl font-bold">${minPrecio.toLocaleString('es-CO')}</p>
-                  <p className="text-xs text-white/60">por noche</p>
+              <div className="flex items-center gap-3 sm:gap-4">
+                {t.logo_url && (
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden flex-shrink-0"
+                    style={{ background: 'rgba(255,255,255,0.92)', border: '1px solid rgba(255,255,255,0.3)', boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
+                    <img src={t.logo_url} alt={t.nombre} className="w-full h-full object-contain p-2" />
+                  </div>
+                )}
+                <div>
+                  <h1 className="text-white text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight">
+                    {t.nombre}
+                  </h1>
+                  {t.slogan && (
+                    <p className="text-white/65 text-sm font-normal mt-1">
+                      {t.slogan}
+                    </p>
+                  )}
                 </div>
-              ) : null
-            })()}
-            {propiedades.length > 0 && (
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-2xl px-3 py-2 sm:px-4 sm:py-3 text-right">
-                <p className="text-lg sm:text-2xl font-bold">{propiedades.length}</p>
-                <p className="text-xs text-white/60">{propiedades.length === 1 ? 'propiedad' : 'propiedades'}</p>
               </div>
-            )}
+            </div>
           </div>
         </div>
       ) : (
