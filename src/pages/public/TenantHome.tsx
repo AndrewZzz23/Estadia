@@ -10,7 +10,7 @@ import WhatsAppIcon from '../../components/WhatsAppIcon'
 import InstagramIcon from '../../components/InstagramIcon'
 import FacebookIcon from '../../components/FacebookIcon'
 import TikTokIcon from '../../components/TikTokIcon'
-import { waGlassStyle, igGlassStyle, fbGlassStyle, ttGlassStyle } from '../../lib/styles'
+import { waGlassStyle } from '../../lib/styles'
 
 export default function TenantHome() {
   const { slug } = useParams<{ slug: string }>()
@@ -123,18 +123,18 @@ export default function TenantHome() {
         <div className="relative h-[90vh] min-h-[560px] overflow-hidden">
 
           {/* ── Portada móvil (vertical) — solo en pantallas < sm ── */}
-          {(t as any).portada_movil && (
+          {t.portada_movil && (
             <div className="block sm:hidden absolute inset-0">
-              {esVideoDirecto((t as any).portada_movil) ? (
-                <video src={(t as any).portada_movil} className="absolute inset-0 w-full h-full object-cover" autoPlay muted loop playsInline />
+              {esVideoDirecto(t.portada_movil) ? (
+                <video src={t.portada_movil} className="absolute inset-0 w-full h-full object-cover" autoPlay muted loop playsInline />
               ) : (
-                <img src={(t as any).portada_movil} alt={t.nombre} className="absolute inset-0 w-full h-full object-cover" />
+                <img src={t.portada_movil} alt={t.nombre} className="absolute inset-0 w-full h-full object-cover" />
               )}
             </div>
           )}
 
           {/* ── Portada escritorio (horizontal) — siempre visible, oculta en móvil si hay portada móvil ── */}
-          <div className={`${(t as any).portada_movil ? 'hidden sm:block' : 'block'} absolute inset-0`}>
+          <div className={`${t.portada_movil ? 'hidden sm:block' : 'block'} absolute inset-0`}>
             {t.foto_portada && youtubeEmbed(t.foto_portada) ? (
               <iframe
                 src={youtubeEmbed(t.foto_portada)!}
@@ -162,9 +162,9 @@ export default function TenantHome() {
               <h1 className="text-white text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight">
                 {t.nombre}
               </h1>
-              {(t as any).slogan && (
+              {t.slogan && (
                 <p className="text-white/65 text-sm font-normal mt-1">
-                  {(t as any).slogan}
+                  {t.slogan}
                 </p>
               )}
             </div>
@@ -240,8 +240,8 @@ export default function TenantHome() {
               )}
               <div>
                 <h2 className="text-4xl sm:text-5xl font-bold text-white leading-tight">{t.nombre}</h2>
-                {(t as any).slogan && (
-                  <p className="text-white/50 text-base mt-1">{(t as any).slogan}</p>
+                {t.slogan && (
+                  <p className="text-white/50 text-base mt-1">{t.slogan}</p>
                 )}
               </div>
             </div>

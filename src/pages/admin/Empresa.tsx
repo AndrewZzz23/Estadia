@@ -49,9 +49,9 @@ export default function Empresa() {
       .then(({ data }) => {
         if (!data) return
         setTenant(data as never)
-        const d = data as Record<string, string | null>
+        const d = data as Tenant
         setPortada(d.foto_portada ?? null)
-        setPortadaMovil((d as any).portada_movil ?? null)
+        setPortadaMovil(d.portada_movil ?? null)
         setLogo(d.logo_url ?? null)
         setForm({
           nombre:        d.nombre        ?? '',
@@ -62,9 +62,9 @@ export default function Empresa() {
           instagram_url:     d.instagram_url ?? '',
           facebook_url:      d.facebook_url  ?? '',
           tiktok_url:        d.tiktok_url    ?? '',
-          mostrar_instagram: (data as any).mostrar_instagram ?? true,
-          mostrar_facebook:  (data as any).mostrar_facebook  ?? true,
-          mostrar_tiktok:    (data as any).mostrar_tiktok    ?? true,
+          mostrar_instagram: d.mostrar_instagram ?? true,
+          mostrar_facebook:  d.mostrar_facebook  ?? true,
+          mostrar_tiktok:    d.mostrar_tiktok    ?? true,
         })
       })
   }, [tenant?.id]) // eslint-disable-line react-hooks/exhaustive-deps

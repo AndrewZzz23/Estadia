@@ -56,11 +56,6 @@ export default function GastosHistorialPanel({ open, onClose }: Props) {
     setMonth(d.getMonth())
   }
 
-  useEffect(() => {
-    if (!open || !tenant) return
-    cargar()
-  }, [open, tenant, year, month])
-
   async function cargar() {
     setLoading(true)
     const { data } = await supabase
@@ -73,6 +68,12 @@ export default function GastosHistorialPanel({ open, onClose }: Props) {
     setGastos((data as Gasto[]) ?? [])
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (!open || !tenant) return
+    cargar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, tenant, year, month])
 
   async function eliminar(id: string) {
     setEliminando(id)

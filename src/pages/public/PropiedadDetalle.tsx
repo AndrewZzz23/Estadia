@@ -78,11 +78,6 @@ export default function PropiedadDetalle() {
     cargar()
   }, [slug, id])
 
-  useEffect(() => {
-    if (!id) return
-    cargarOcupados()
-  }, [id, calYear, calMonth])
-
   async function cargarOcupados() {
     const desde = ymd(new Date(calYear, calMonth, 1))
     const hasta = ymd(new Date(calYear, calMonth + 1, 0))
@@ -106,6 +101,12 @@ export default function PropiedadDetalle() {
     })
     setOcupados(set)
   }
+
+  useEffect(() => {
+    if (!id) return
+    cargarOcupados()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, calYear, calMonth])
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-white">

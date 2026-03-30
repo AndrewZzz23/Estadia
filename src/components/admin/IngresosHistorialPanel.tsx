@@ -50,11 +50,6 @@ export default function IngresosHistorialPanel({ open, onClose }: Props) {
     setMonth(d.getMonth())
   }
 
-  useEffect(() => {
-    if (!open || !tenant) return
-    cargar()
-  }, [open, tenant, year, month])
-
   async function cargar() {
     setLoading(true)
     const { data: props } = await supabase
@@ -73,6 +68,12 @@ export default function IngresosHistorialPanel({ open, onClose }: Props) {
     setReservas((data as ReservaIngreso[]) ?? [])
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (!open || !tenant) return
+    cargar()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, tenant, year, month])
 
   const total = reservas.reduce((sum, r) => sum + (r.monto_total ?? 0), 0)
 

@@ -48,8 +48,6 @@ export default function Reservas() {
 
   const hoy = new Date().toISOString().split('T')[0]
 
-  useEffect(() => { cargar() }, [tenant])
-
   async function cargar() {
     if (!tenant) return
     const { data: props } = await supabase
@@ -63,6 +61,9 @@ export default function Reservas() {
     setReservas((data as ReservaConPropiedad[]) ?? [])
     setLoading(false)
   }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { cargar() }, [tenant])
 
   async function cambiarEstado(id: string, estado: EstadoReserva) {
     await supabase.from('reservas').update({ estado } as never).eq('id', id)

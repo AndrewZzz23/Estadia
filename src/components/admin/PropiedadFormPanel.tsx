@@ -87,6 +87,7 @@ export default function PropiedadFormPanel({ open, propiedadId, onClose, onSaved
   // Cargar datos al abrir
   useEffect(() => {
     if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError('')
     setSavedId(null)
 

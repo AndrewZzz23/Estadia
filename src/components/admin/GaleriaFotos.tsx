@@ -15,14 +15,15 @@ export default function GaleriaFotos({ propiedadId }: Props) {
   const [confirmFoto, setConfirmFoto] = useState<FotoPropiedad | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { cargarFotos() }, [propiedadId])
-
   async function cargarFotos() {
     const { data } = await supabase
       .from('fotos_propiedades').select('*')
       .eq('propiedad_id', propiedadId).order('orden')
     setFotos((data as FotoPropiedad[]) ?? [])
   }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { cargarFotos() }, [propiedadId])
 
   async function subirFotos(files: FileList) {
     setSubiendo(true)

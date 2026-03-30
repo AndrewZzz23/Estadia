@@ -21,8 +21,6 @@ export default function Propiedades() {
   function abrirPanel(id: string | null) { setPanelId(id); setPanelOpen(true) }
   function cerrarPanel() { setPanelOpen(false) }
 
-  useEffect(() => { cargar() }, [tenant])
-
   async function cargar() {
     if (!tenant) return
     const { data } = await supabase
@@ -33,6 +31,9 @@ export default function Propiedades() {
     setPropiedades((data as PropiedadConFotos[]) ?? [])
     setLoading(false)
   }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { cargar() }, [tenant])
 
   async function toggleActiva(id: string, activa: boolean) {
     await supabase.from('propiedades').update({ activa: !activa } as never).eq('id', id)

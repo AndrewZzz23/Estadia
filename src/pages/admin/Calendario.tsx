@@ -58,7 +58,7 @@ export default function Calendario() {
   }
   const inicializado = propiedades.length > 0 || !loading
 
-  useEffect(() => { cargar() }, [tenant, year, month])
+  useEffect(() => { cargar() }, [tenant, year, month]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function cargar() {
     if (!tenant) return

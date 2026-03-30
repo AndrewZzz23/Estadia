@@ -90,7 +90,7 @@ export default function ReservaForm() {
   async function verificarDisponibilidad() {
     if (!form.propiedad_id || !form.fecha_inicio || !form.fecha_fin) return
     setVerificando(true)
-    const { data } = await (supabase.rpc as Function)('propiedad_disponible', {
+    const { data } = await (supabase.rpc as unknown as (...a: unknown[]) => Promise<{ data: unknown }>)('propiedad_disponible', {
       p_propiedad_id: form.propiedad_id,
       p_fecha_inicio: form.fecha_inicio,
       p_fecha_fin:    form.fecha_fin,

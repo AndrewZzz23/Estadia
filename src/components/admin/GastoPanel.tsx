@@ -41,6 +41,7 @@ export default function GastoPanel({ open, onClose, onCreated }: Props) {
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCategoria('aseo'); setMonto(''); setFecha(today()); setPropiedadId(''); setNota(''); setError('')
     }
   }, [open])

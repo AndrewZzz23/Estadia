@@ -65,7 +65,11 @@ export default function QuickReservaPanel({ open, onClose, fechaInicio, propieda
 
   // Reset form al abrir
   useEffect(() => {
-    if (open) { setForm(emptyForm()); setError('') }
+    if (open) {
+      setForm(emptyForm())
+      setError('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, fechaInicio, propiedadDefault])
 
   function set(field: keyof QuickForm, val: string) {

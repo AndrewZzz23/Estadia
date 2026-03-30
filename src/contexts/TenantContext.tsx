@@ -23,6 +23,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       try {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setTenant(JSON.parse(stored))
       } catch {
         localStorage.removeItem(STORAGE_KEY)
@@ -64,6 +65,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTenant() {
   const ctx = useContext(TenantContext)
   if (!ctx) throw new Error('useTenant debe usarse dentro de TenantProvider')
