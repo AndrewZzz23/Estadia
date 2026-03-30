@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, Link, Navigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { Bloqueo, FotoPropiedad, PropiedadConFotos, Reserva, Tenant } from '../../types/database'
@@ -11,6 +11,7 @@ import { getFestivos } from '../../lib/festivos'
 import WhatsAppIcon from '../../components/WhatsAppIcon'
 import { waGlassStyle } from '../../lib/styles'
 import type { LucideIcon } from 'lucide-react'
+import airbnbLogo from '../../assets/airbnb.png'
 
 const AMENIDADES_ICONOS: Record<string, LucideIcon> = {
   'WiFi':               Wifi,
@@ -42,6 +43,10 @@ export default function PropiedadDetalle() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [loading, setLoading]     = useState(true)
   const [scrolled, setScrolled]   = useState(false)
+
+  const touchHeroX = useRef<number>(0)
+  const ctaRef     = useRef<HTMLDivElement>(null)
+  const [ctaVisible, setCtaVisible] = useState(false)
 
   const hoy = new Date()
   const [calYear,  setCalYear]  = useState(hoy.getFullYear())
@@ -108,6 +113,31 @@ export default function PropiedadDetalle() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, calYear, calMonth])
 
+  // Scroll-reveal: añade clase in-view cuando los elementos entran al viewport
+  useEffect(() => {
+    if (!propiedad) return
+    const io = new IntersectionObserver(
+      entries => entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('in-view'); io.unobserve(e.target) }
+      }),
+      { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
+    )
+    document.querySelectorAll('[data-scroll]').forEach(el => io.observe(el))
+    return () => io.disconnect()
+  }, [propiedad])
+
+  // Oculta la barra fija cuando el CTA inferior es visible
+  useEffect(() => {
+    const el = ctaRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      entries => setCtaVisible(entries[0].isIntersecting),
+      { threshold: 0.1 }
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [propiedad])
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="w-8 h-8 border-2 border-[#2A7A68] border-t-transparent rounded-full animate-spin" />
@@ -122,6 +152,13 @@ export default function PropiedadDetalle() {
   const waNum = (t.telefono ?? '').replace(/\D/g, '')
   const waMsg = encodeURIComponent(`Hola, me interesa la propiedad "${p.nombre}". ¿Está disponible?`)
   const waLink = `https://wa.me/${waNum}?text=${waMsg}`
+
+  // Extrae el ID de listing de Airbnb desde la URL de iCal
+  const airbnbListingUrl = (() => {
+    if (!p.ical_url) return null
+    const m = p.ical_url.match(/airbnb\.[a-z.]+\/calendar\/ical\/(\d+)\.ics/)
+    return m ? `https://www.airbnb.com/rooms/${m[1]}` : null
+  })()
 
   // Calendar grid
   const primerDia = new Date(calYear, calMonth, 1)
@@ -145,28 +182,37 @@ export default function PropiedadDetalle() {
 
   return (
     <div className="min-h-screen bg-[#E8E4DE]">
+      <style>{`
+        [data-scroll]{opacity:0;transform:translateY(28px);transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}
+        [data-scroll].in-view{opacity:1;transform:translateY(0)}
+        [data-scroll][data-d="1"]{transition-delay:.08s}
+        [data-scroll][data-d="2"]{transition-delay:.16s}
+        [data-scroll][data-d="3"]{transition-delay:.24s}
+        [data-scroll][data-d="4"]{transition-delay:.32s}
+      `}</style>
 
-      {/* ── HEADER ── */}
-      <header className={`fixed top-0 left-0 right-0 z-30 transition-all duration-300 ${
-        scrolled ? 'bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm' : 'bg-transparent'
-      }`}>
+      {/* ── HEADER glass ── */}
+      <header
+        className="fixed top-0 left-0 right-0 z-30 transition-all duration-300"
+        style={{
+          background: scrolled ? 'rgba(16,24,32,0.60)' : 'transparent',
+          backdropFilter: scrolled ? 'saturate(180%) blur(20px)' : 'none',
+          WebkitBackdropFilter: scrolled ? 'saturate(180%) blur(20px)' : 'none',
+          borderBottom: scrolled ? '1px solid rgba(255,255,255,0.08)' : 'none',
+        }}
+      >
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link
             to={`/${slug}`}
-            className={`flex items-center gap-2 text-sm font-medium transition-colors ${
-              scrolled ? 'text-[#1E3E50] hover:text-[#2A7A68]' : 'text-white hover:text-white/80'
-            }`}
+            className="flex items-center gap-2 text-sm font-medium text-white/90 hover:text-white transition-colors"
           >
             <ArrowLeft size={16} />
             {t.nombre}
           </Link>
           {waNum && (
             <a href={waLink} target="_blank" rel="noopener noreferrer"
-              className={`hidden sm:flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full border transition-all ${
-                scrolled
-                  ? 'border-[#25D366] text-[#25D366] hover:bg-[#25D366] hover:text-white'
-                  : 'border-white/50 text-white hover:bg-white hover:text-[#1E3E50]'
-              }`}
+              className="hidden sm:flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full transition-all hover:scale-105"
+              style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
             >
               <MessageCircle size={14} />
               Consultar
@@ -175,136 +221,175 @@ export default function PropiedadDetalle() {
         </div>
       </header>
 
-      {/* ── GALERÍA MOSAICO ── */}
-      {fotos.length > 0 && (
-        <div className="relative h-[75vh] min-h-[480px] overflow-hidden">
-          <img
-            src={fotos[fotoIdx].url}
-            alt={p.nombre}
-            className="w-full h-full object-cover cursor-zoom-in transition-opacity duration-300"
-            onClick={() => setLightboxOpen(true)}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60 pointer-events-none" />
+      {/* ── HERO ── */}
+      <section className="relative">
+        {fotos.length > 0 ? (
+          <>
+            {/* Mobile: carrusel swipeable */}
+            <div
+              className="sm:hidden relative overflow-hidden cursor-pointer"
+              style={{ height: '85vh' }}
+              onTouchStart={e => { touchHeroX.current = e.touches[0].clientX }}
+              onTouchEnd={e => {
+                const diff = touchHeroX.current - e.changedTouches[0].clientX
+                if (Math.abs(diff) < 40) { setLightboxOpen(true); return }
+                if (diff > 0) setFotoIdx(i => (i + 1) % fotos.length)
+                else setFotoIdx(i => (i - 1 + fotos.length) % fotos.length)
+              }}
+              onClick={() => setLightboxOpen(true)}
+            >
+              <img src={fotos[fotoIdx].url} alt={p.nombre} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/75 pointer-events-none" />
+              {fotos.length > 1 && (
+                <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {fotos.map((_, i) => (
+                    <button key={i} onClick={() => setFotoIdx(i)}
+                      className={`rounded-full transition-all ${i === fotoIdx ? 'w-5 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/50'}`} />
+                  ))}
+                </div>
+              )}
+            </div>
 
-          {fotos.length > 1 && (
-            <>
+            {/* Desktop: mosaico */}
+            <div
+              className="hidden sm:grid"
+              style={{ gridTemplateColumns: fotos.length > 1 ? '1fr 300px' : '1fr', gap: '3px', height: '82vh' }}
+            >
+              {/* Foto principal */}
+              <div className="relative overflow-hidden cursor-zoom-in" onClick={() => setLightboxOpen(true)}>
+                <img src={fotos[0].url} alt={p.nombre} className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-700" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/75 pointer-events-none" />
+              </div>
+              {/* Columna lateral */}
+              {fotos.length > 1 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  {fotos.slice(1, 3).map((f, i) => (
+                    <div key={i} className="flex-1 relative overflow-hidden cursor-zoom-in"
+                      onClick={() => { setFotoIdx(i + 1); setLightboxOpen(true) }}>
+                      <img src={f.url} alt="" className="w-full h-full object-cover hover:scale-[1.04] transition-transform duration-500" />
+                      {i === 1 && fotos.length > 3 && (
+                        <div className="absolute inset-0 bg-black/55 flex items-center justify-center">
+                          <span className="text-white font-bold text-xl">+{fotos.length - 3}</span>
+                          <span className="text-white/70 text-sm ml-1">fotos</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {fotos.length === 1 && <div className="flex-1 bg-black/10" />}
+                </div>
+              )}
+            </div>
+
+            {/* Botón ver todas */}
+            {fotos.length > 1 && (
               <button
-                onClick={() => setFotoIdx(i => (i - 1 + fotos.length) % fotos.length)}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-black/30 hover:bg-black/50 backdrop-blur-sm border border-white/20 text-white rounded-full transition-all"
+                onClick={() => setLightboxOpen(true)}
+                className="absolute top-20 right-4 sm:right-5 flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-2 rounded-xl transition-all hover:scale-105 active:scale-95"
+                style={{ background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)' }}
               >
-                <ChevronLeft size={20} />
+                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+                {fotos.length} fotos
               </button>
-              <button
-                onClick={() => setFotoIdx(i => (i + 1) % fotos.length)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-black/30 hover:bg-black/50 backdrop-blur-sm border border-white/20 text-white rounded-full transition-all"
-              >
-                <ChevronRight size={20} />
-              </button>
-
-              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-1.5">
-                {fotos.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setFotoIdx(i)}
-                    className={`rounded-full transition-all ${
-                      fotoIdx === i ? 'w-5 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/50'
-                    }`}
-                  />
-                ))}
-              </div>
-
-              <div className="absolute top-20 right-4 bg-black/30 backdrop-blur-sm border border-white/20 text-white text-xs font-medium px-2.5 py-1 rounded-full">
-                {fotoIdx + 1} / {fotos.length}
-              </div>
-            </>
-          )}
-
-          <div className="absolute bottom-6 left-6 right-6 max-w-6xl mx-auto pointer-events-none">
-            <p className="text-white/70 text-xs font-semibold uppercase tracking-widest mb-1">{t.nombre}</p>
-            <h1 className="text-white text-4xl sm:text-5xl font-bold drop-shadow-lg leading-tight">{p.nombre}</h1>
-            {p.ubicacion && (
-              <div className="flex items-center gap-1.5 text-white/80 mt-2 text-sm">
-                <MapPin size={13} />{p.ubicacion}
-              </div>
             )}
+          </>
+        ) : (
+          <div className="h-36" style={{ background: 'linear-gradient(135deg, #1E3E50, #2A7A68)' }} />
+        )}
+
+        {/* Overlay info */}
+        <div className="absolute bottom-0 inset-x-0 pointer-events-none">
+          <div className="max-w-6xl mx-auto px-5 sm:px-6 pb-6 sm:pb-8 pointer-events-auto">
+            <div
+              className="inline-flex flex-col rounded-2xl px-5 py-4 max-w-lg"
+              style={{
+                background: 'rgba(0,0,0,0.40)',
+                backdropFilter: 'blur(22px)',
+                WebkitBackdropFilter: 'blur(22px)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+              }}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1" style={{ color: '#64B5A0' }}>{t.nombre}</span>
+              <h1 className="text-white text-2xl sm:text-3xl font-bold leading-tight">{p.nombre}</h1>
+              {p.ubicacion && (
+                <div className="flex items-center gap-1 text-white/65 text-xs mt-1.5">
+                  <MapPin size={11} />{p.ubicacion}
+                </div>
+              )}
+              {(p.capacidad || p.habitaciones || p.banos) && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                  {p.capacidad && (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-white/80 px-2.5 py-1 rounded-full"
+                      style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                      <Users size={10} />{p.capacidad} pers.
+                    </span>
+                  )}
+                  {p.habitaciones && (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-white/80 px-2.5 py-1 rounded-full"
+                      style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                      <BedDouble size={10} />{p.habitaciones} hab.
+                    </span>
+                  )}
+                  {p.banos && (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-white/80 px-2.5 py-1 rounded-full"
+                      style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                      <Bath size={10} />{p.banos} baños
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      )}
+      </section>
 
-      {/* ── CONTENIDO ── */}
-      <main className="max-w-6xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      {/* ── MAIN CONTENT ── */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-          {/* Columna principal */}
-          <div className="lg:col-span-2 space-y-10 bg-white rounded-3xl p-8">
+          {/* ── COLUMNA PRINCIPAL ── */}
+          <div className="lg:col-span-2 space-y-4">
 
-            {/* Info si no hay fotos */}
+            {/* Sin fotos: encabezado aquí */}
             {fotos.length === 0 && (
-              <div>
-                <h1 className="text-4xl font-bold text-[#1E3E50]">{p.nombre}</h1>
+              <div className="bg-white rounded-3xl p-7 shadow-sm">
+                <h1 className="text-3xl font-bold text-[#1E3E50]">{p.nombre}</h1>
                 {p.ubicacion && (
                   <div className="flex items-center gap-1.5 text-gray-400 mt-2 text-sm">
-                    <MapPin size={13} />{p.ubicacion}
+                    <MapPin size={12} />{p.ubicacion}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Capacidades */}
-            <div className="flex flex-wrap gap-6 py-6 border-y border-gray-100">
-              {p.capacidad    && (
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#2A7A68]/10 flex items-center justify-center">
-                    <Users size={18} className="text-[#2A7A68]" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Capacidad</p>
-                    <p className="font-semibold text-gray-800 text-sm">{p.capacidad} personas</p>
-                  </div>
-                </div>
-              )}
-              {p.habitaciones && (
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#2A7A68]/10 flex items-center justify-center">
-                    <BedDouble size={18} className="text-[#2A7A68]" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Habitaciones</p>
-                    <p className="font-semibold text-gray-800 text-sm">{p.habitaciones}</p>
-                  </div>
-                </div>
-              )}
-              {p.banos && (
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#2A7A68]/10 flex items-center justify-center">
-                    <Bath size={18} className="text-[#2A7A68]" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Baños</p>
-                    <p className="font-semibold text-gray-800 text-sm">{p.banos}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Descripción */}
             {p.descripcion && (
-              <div>
-                <h2 className="text-xl font-bold text-[#1E3E50] mb-4">Acerca de este espacio</h2>
-                <p className="text-gray-600 leading-relaxed text-base whitespace-pre-wrap">{p.descripcion}</p>
+              <div data-scroll className="bg-white rounded-3xl p-7 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#2A7A68] mb-0.5">Acerca de</p>
+                <h2 className="text-xl font-bold text-[#1E3E50] mb-4">este espacio</h2>
+                <p className="text-gray-600 leading-relaxed text-[15px] whitespace-pre-wrap">{p.descripcion}</p>
               </div>
             )}
 
             {/* Amenidades */}
             {p.amenidades?.length > 0 && (
-              <div>
-                <h2 className="text-xl font-bold text-[#1E3E50] mb-5">Comodidades</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div data-scroll data-d="1" className="bg-white rounded-3xl p-7 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#2A7A68] mb-0.5">Lo que</p>
+                <h2 className="text-xl font-bold text-[#1E3E50] mb-5">ofrecemos</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {(p.amenidades as string[]).map(a => {
                     const Icon = AMENIDADES_ICONOS[a] ?? Check
                     return (
-                      <div key={a} className="flex items-center gap-2.5 text-sm text-gray-700 bg-gray-50 rounded-xl px-3 py-2.5">
-                        <Icon size={15} className="text-[#2A7A68] flex-shrink-0" />
+                      <div key={a}
+                        className="flex items-center gap-2.5 px-3 py-3 rounded-2xl text-sm font-medium text-gray-700 transition-colors"
+                        style={{ background: 'linear-gradient(135deg, rgba(30,62,80,0.04), rgba(42,122,104,0.03))', border: '1px solid rgba(30,62,80,0.07)' }}>
+                        <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{ background: 'rgba(42,122,104,0.12)' }}>
+                          <Icon size={14} className="text-[#2A7A68]" />
+                        </div>
                         {a}
                       </div>
                     )
@@ -315,238 +400,331 @@ export default function PropiedadDetalle() {
 
             {/* Mapa */}
             {p.latitud && p.longitud && (
-              <div>
-                <h2 className="text-xl font-bold text-[#1E3E50] mb-4">Dónde se ubica</h2>
-                <div className="rounded-2xl overflow-hidden border border-gray-100">
-                  <iframe
-                    title="Ubicación"
-                    src={`https://maps.google.com/maps?q=${p.latitud},${p.longitud}&z=15&t=k&output=embed`}
-                    className="w-full"
-                    style={{ height: 320, border: 'none' }}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
+              <div data-scroll data-d="2" className="bg-white rounded-3xl overflow-hidden shadow-sm">
+                <div className="px-7 pt-6 pb-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#2A7A68] mb-0.5">Dónde</p>
+                  <h2 className="text-xl font-bold text-[#1E3E50]">encontrarnos</h2>
                 </div>
-                <a
-                  href={`https://www.google.com/maps?q=${p.latitud},${p.longitud}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 mt-2 text-xs font-medium text-[#2A7A68] hover:underline"
-                >
-                  <MapPin size={12} />
-                  Abrir en Google Maps
-                </a>
+                <iframe
+                  title="Ubicación"
+                  src={`https://maps.google.com/maps?q=${p.latitud},${p.longitud}&z=15&t=k&output=embed`}
+                  className="w-full"
+                  style={{ height: 280, border: 'none' }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+                <div className="px-7 py-4">
+                  <a href={`https://www.google.com/maps?q=${p.latitud},${p.longitud}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#2A7A68] hover:underline">
+                    <MapPin size={11} />Abrir en Google Maps
+                  </a>
+                </div>
               </div>
             )}
 
             {/* Calendario */}
-            <div>
-              <h2 className="text-xl font-bold text-[#1E3E50] mb-4">Disponibilidad</h2>
-
-              <div className="rounded-3xl overflow-hidden bg-white border border-gray-100" style={{ boxShadow: '6px 12px 32px rgba(0,0,0,0.18), 2px 4px 8px rgba(0,0,0,0.1)' }}>
-
-                {/* Header */}
-                <div className="px-6 pt-6 pb-4 border-b border-gray-100 bg-gray-50">
-                  <div className="flex items-center justify-between">
+            <div data-scroll data-d="3" className="rounded-3xl overflow-hidden shadow-sm bg-white">
+              {/* Header limpio */}
+              <div className="px-6 pt-5 pb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#2A7A68] mb-0.5">Disponibilidad</p>
+                    <h2 className="text-base font-bold text-[#1E3E50]">{MESES[calMonth]} {calYear}</h2>
+                  </div>
+                  <div className="flex items-center gap-1.5">
                     <button onClick={() => navCal(-1)}
-                      className="w-9 h-9 flex items-center justify-center rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">
-                      <ChevronLeft size={16} />
+                      className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-500 hover:text-[#1E3E50] hover:bg-gray-100 transition-colors">
+                      <ChevronLeft size={15} />
                     </button>
-                    <div className="text-center">
-                      <p className="text-[#1E3E50] font-bold text-lg leading-tight">{MESES[calMonth]}</p>
-                      <p className="text-gray-400 text-xs">{calYear}</p>
-                    </div>
                     <button onClick={() => navCal(1)}
-                      className="w-9 h-9 flex items-center justify-center rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">
-                      <ChevronRight size={16} />
+                      className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-500 hover:text-[#1E3E50] hover:bg-gray-100 transition-colors">
+                      <ChevronRight size={15} />
                     </button>
                   </div>
                 </div>
+              </div>
 
-                {/* Días de la semana */}
-                <div className="grid grid-cols-7 px-4 pt-4 mb-1">
-                  {DIAS.map((d, i) => (
-                    <div key={i} className="text-xs font-semibold text-gray-300 text-center py-1 tracking-widest uppercase">{d}</div>
-                  ))}
+              {/* Días semana */}
+              <div className="grid grid-cols-7 px-4 pt-4 mb-1">
+                {DIAS.map((d, i) => (
+                  <div key={i} className="text-[10px] font-bold text-gray-300 text-center py-1 tracking-widest uppercase">{d}</div>
+                ))}
+              </div>
+
+              {/* Celdas */}
+              <div className="grid grid-cols-7 gap-0.5 px-4 pb-5">
+                {dias.map((dia, i) => {
+                  const d       = ymd(dia)
+                  const esMes   = dia.getMonth() === calMonth
+                  const esHoy   = d === hoyStr
+                  const pasado  = d < hoyStr
+                  const ocupado = ocupados.has(d)
+                  const festivo = festivos.get(d)
+                  const esDom   = dia.getDay() === 0
+                  return (
+                    <div key={i} title={festivo}
+                      className={`h-10 flex items-center justify-center rounded-xl text-xs font-medium transition-all
+                        ${!esMes ? 'opacity-20' : ''}
+                        ${ocupado && esMes ? 'bg-red-100 text-red-500 font-semibold' : ''}
+                        ${festivo && !ocupado && esMes ? 'bg-amber-100 text-amber-500 font-bold' : ''}
+                        ${pasado && !esHoy && !ocupado && !festivo && esMes ? 'text-gray-300' : ''}
+                        ${!ocupado && !pasado && !esHoy && !festivo && esMes ? `${esDom ? 'text-red-400' : 'text-gray-700'} hover:bg-[#2A7A68]/10 hover:text-[#2A7A68]` : ''}
+                      `}>
+                      {esHoy ? (
+                        <span className="w-8 h-8 flex items-center justify-center rounded-full text-white font-bold text-xs"
+                          style={{ background: 'linear-gradient(135deg, #2A7A68, #1fa085)', boxShadow: '0 4px 10px rgba(42,122,104,0.35)' }}>
+                          {dia.getDate()}
+                        </span>
+                      ) : ocupado && esMes ? (
+                        <span className="line-through opacity-50">{dia.getDate()}</span>
+                      ) : dia.getDate()}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Leyenda */}
+              <div className="flex gap-4 px-6 py-3 border-t border-gray-100 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#2A7A68]" />
+                  <span className="text-gray-400 text-xs">Hoy</span>
                 </div>
-
-                {/* Celdas */}
-                <div className="grid grid-cols-7 gap-0.5 px-4 pb-5">
-                  {dias.map((dia, i) => {
-                    const d       = ymd(dia)
-                    const esMes   = dia.getMonth() === calMonth
-                    const esHoy   = d === hoyStr
-                    const pasado  = d < hoyStr
-                    const ocupado = ocupados.has(d)
-                    const festivo = festivos.get(d)
-                    const esDom   = dia.getDay() === 0
-
-                    return (
-                      <div key={i} title={festivo}
-                        className={`h-10 flex items-center justify-center rounded-xl text-xs font-medium transition-all
-                          ${!esMes ? 'opacity-20' : ''}
-                          ${ocupado && esMes ? 'bg-red-100 text-red-500 font-semibold' : ''}
-                          ${festivo && !ocupado && esMes ? 'bg-amber-100 text-amber-500 font-bold' : ''}
-                          ${pasado && !esHoy && !ocupado && !festivo && esMes ? 'text-gray-300' : ''}
-                          ${!ocupado && !pasado && !esHoy && !festivo && esMes ? `${esDom ? 'text-red-400' : 'text-gray-700'} hover:bg-[#2A7A68]/10 hover:text-[#2A7A68]` : ''}
-                        `}>
-                        {esHoy ? (
-                          <span className="w-8 h-8 flex items-center justify-center rounded-full text-white font-bold text-xs"
-                            style={{ background: 'linear-gradient(135deg, #2A7A68, #1fa085)', boxShadow: '0 4px 10px rgba(42,122,104,0.35)' }}>
-                            {dia.getDate()}
-                          </span>
-                        ) : ocupado && esMes ? (
-                          <span className="line-through opacity-50">{dia.getDate()}</span>
-                        ) : dia.getDate()}
-                      </div>
-                    )
-                  })}
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-md bg-red-100 border border-red-300" />
+                  <span className="text-gray-400 text-xs">Ocupado</span>
                 </div>
-
-                {/* Leyenda */}
-                <div className="flex gap-4 px-6 py-3 border-t border-gray-100 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full inline-block bg-[#2A7A68]" />
-                    <span className="text-gray-400 text-xs">Hoy</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-md bg-red-100 border border-red-300 inline-block" />
-                    <span className="text-gray-400 text-xs">Ocupado</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-md bg-amber-100 border border-amber-300 inline-block" />
-                    <span className="text-gray-400 text-xs">Festivo</span>
-                  </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-md bg-amber-100 border border-amber-300" />
+                  <span className="text-gray-400 text-xs">Festivo</span>
                 </div>
               </div>
             </div>
-
-            {/* Sobre la empresa */}
-            {t.descripcion && (
-              <div className="border-t border-gray-100 pt-10">
-                <h2 className="text-xl font-bold text-[#1E3E50] mb-4">Sobre {t.nombre}</h2>
-                <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{t.descripcion}</p>
-                {t.telefono && (
-                  <a
-                    href={`https://wa.me/${t.telefono.replace(/\D/g,'')}?text=${encodeURIComponent('Hola, tengo una consulta.')}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-[#2A7A68] hover:underline"
-                  >
-                    <MessageCircle size={14} />
-                    Contactar directamente
-                  </a>
-                )}
-              </div>
-            )}
           </div>
 
-          {/* ── SIDEBAR ── */}
-          <div>
+          {/* ── SIDEBAR (solo desktop) ── */}
+          <div className="hidden lg:block">
             <div className="sticky top-20 space-y-4">
-              <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-xl shadow-black/10">
 
-                {/* Precios */}
-                {(p.precio_noche || p.precio_semana || p.precio_mes) && (
-                  <div className="space-y-3 pb-5 border-b border-gray-100 mb-5">
-                    {p.precio_noche && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">Por noche</span>
-                        <span className="font-bold text-gray-900 text-lg">${p.precio_noche.toLocaleString('es-CO')}</span>
+              {/* Precio + CTA */}
+              <div className="rounded-3xl overflow-hidden" style={{ boxShadow: '0 20px 60px rgba(30,62,80,0.25)' }}>
+                {/* Header precio navy */}
+                <div
+                  className="px-6 pt-6 pb-5"
+                  style={{ background: 'linear-gradient(135deg, #1E3E50 0%, #1a4a3e 100%)' }}
+                >
+                  {p.precio_noche ? (
+                    <>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-white/35 mb-1">Desde</p>
+                      <div className="flex items-end gap-1.5">
+                        <span className="text-white text-4xl font-bold leading-none">${p.precio_noche.toLocaleString('es-CO')}</span>
+                        <span className="text-white/45 text-sm mb-0.5">/ noche</span>
                       </div>
-                    )}
-                    {p.precio_semana && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">Por semana</span>
-                        <span className="font-semibold text-gray-800">${p.precio_semana.toLocaleString('es-CO')}</span>
-                      </div>
-                    )}
-                    {p.precio_mes && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">Por mes</span>
-                        <span className="font-semibold text-gray-800">${p.precio_mes.toLocaleString('es-CO')}</span>
+                    </>
+                  ) : (
+                    <p className="text-white/60 text-sm font-medium">Consultar precio</p>
+                  )}
+                  {(p.precio_semana || p.precio_mes) && (
+                    <div className="flex gap-5 mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                      {p.precio_semana && (
+                        <div>
+                          <p className="text-[9px] uppercase tracking-widest text-white/30">Semana</p>
+                          <p className="text-white/75 font-semibold text-sm">${p.precio_semana.toLocaleString('es-CO')}</p>
+                        </div>
+                      )}
+                      {p.precio_mes && (
+                        <div>
+                          <p className="text-[9px] uppercase tracking-widest text-white/30">Mes</p>
+                          <p className="text-white/75 font-semibold text-sm">${p.precio_mes.toLocaleString('es-CO')}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* CTA */}
+                <div className="bg-white p-5 space-y-3">
+                  {waNum ? (
+                    <a href={waLink} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2.5 w-full text-white font-semibold py-4 rounded-2xl text-sm transition-all hover:scale-[1.02] active:scale-95"
+                      style={waGlassStyle}>
+                      <WhatsAppIcon size={18} />
+                      Consultar disponibilidad
+                    </a>
+                  ) : (
+                    <div className="w-full bg-gray-100 text-gray-400 font-medium py-4 rounded-2xl text-sm text-center">
+                      Sin contacto disponible
+                    </div>
+                  )}
+                  {airbnbListingUrl && (
+                    <a href={airbnbListingUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl border transition-all hover:scale-[1.02] active:scale-95"
+                      style={{ background: 'rgba(255,90,95,0.06)', borderColor: 'rgba(255,90,95,0.2)' }}>
+                      <img src={airbnbLogo} alt="Airbnb" className="w-5 h-5 object-contain flex-shrink-0" />
+                      <span className="text-sm font-medium flex-1" style={{ color: '#e0484d' }}>Ver en Airbnb</span>
+                      <svg className="w-3.5 h-3.5 opacity-40" style={{ color: '#e0484d' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  )}
+                  <p className="text-[11px] text-gray-400 text-center pt-1">Respuesta rápida · Sin compromiso</p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {/* ── CTA FINAL expandido ── */}
+        <div ref={ctaRef} data-scroll className="mt-5 rounded-3xl overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #1E3E50 0%, #162e3b 60%, #0f2028 100%)', boxShadow: '0 24px 64px rgba(30,62,80,0.35)' }}>
+          <div className="relative overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-10"
+              style={{ background: 'radial-gradient(circle, #2A7A68, transparent)' }} />
+            <div className="absolute -bottom-12 -left-12 w-56 h-56 rounded-full opacity-10"
+              style={{ background: 'radial-gradient(circle, #64B5A0, transparent)' }} />
+            <div className="relative px-7 py-10 sm:py-12">
+              <div className="max-w-2xl mx-auto text-center">
+                {/* Precio grande */}
+                {p.precio_noche ? (
+                  <div className="mb-8" data-scroll data-d="1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/35 mb-2">Desde</p>
+                    <div className="flex items-end justify-center gap-2">
+                      <span className="text-5xl sm:text-6xl font-bold text-white leading-none">
+                        ${p.precio_noche.toLocaleString('es-CO')}
+                      </span>
+                      <span className="text-white/40 text-base mb-1.5">/ noche</span>
+                    </div>
+                    {(p.precio_semana || p.precio_mes) && (
+                      <div className="flex justify-center gap-8 mt-4 pt-4"
+                        style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                        {p.precio_semana && (
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-white/30">Semana</p>
+                            <p className="text-white/70 font-semibold">${p.precio_semana.toLocaleString('es-CO')}</p>
+                          </div>
+                        )}
+                        {p.precio_mes && (
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-white/30">Mes</p>
+                            <p className="text-white/70 font-semibold">${p.precio_mes.toLocaleString('es-CO')}</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
-
-                {waNum ? (
-                  <a
-                    href={waLink}
-                    target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2.5 w-full text-white font-semibold py-4 rounded-2xl text-sm transition-all hover:scale-[1.02] active:scale-95"
-                    style={waGlassStyle}
-                  >
-                    <WhatsAppIcon size={18} />
-                    Consultar disponibilidad
-                  </a>
                 ) : (
-                  <div className="w-full bg-gray-100 text-gray-400 font-medium py-4 rounded-2xl text-sm text-center">
-                    Sin contacto disponible
-                  </div>
+                  <p className="text-white/60 text-lg font-medium mb-8" data-scroll data-d="1">Consulta disponibilidad y precios</p>
                 )}
 
-                <p className="text-xs text-gray-400 text-center mt-3">
-                  Respuesta rápida · Sin compromiso
-                </p>
+                {/* Botones */}
+                <div className="flex flex-col sm:flex-row gap-3 justify-center items-center" data-scroll data-d="2">
+                  {waNum && (
+                    <a href={waLink} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2.5 w-full sm:w-auto sm:min-w-[220px] text-white font-semibold py-4 px-8 rounded-2xl text-base transition-all hover:scale-[1.02] active:scale-95"
+                      style={waGlassStyle}>
+                      <WhatsAppIcon size={20} />
+                      Consultar disponibilidad
+                    </a>
+                  )}
+                  {airbnbListingUrl && (
+                    <a href={airbnbListingUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-3 w-full sm:w-auto px-6 py-4 rounded-2xl border transition-all hover:scale-[1.02] active:scale-95"
+                      style={{ background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.15)' }}>
+                      <img src={airbnbLogo} alt="Airbnb" className="w-5 h-5 object-contain flex-shrink-0" />
+                      <span className="text-sm font-medium text-white/80">Ver en Airbnb</span>
+                    </a>
+                  )}
+                </div>
+                <p className="text-white/25 text-xs mt-5" data-scroll data-d="3">Respuesta rápida · Sin compromiso</p>
               </div>
             </div>
           </div>
-
         </div>
       </main>
 
-      {/* ── LIGHTBOX ── */}
+      {/* ── BARRA FIJA inferior (mobile) ── */}
+      <div className={`fixed bottom-0 left-0 right-0 z-40 lg:hidden transition-transform duration-300 ${scrolled && !ctaVisible ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className="px-4 pb-5 pt-3" style={{ background: 'linear-gradient(to top, rgba(15,26,34,0.72) 0%, transparent 100%)', backdropFilter: 'blur(4px)' }}>
+          <div className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-2xl"
+            style={{ boxShadow: '0 8px 32px rgba(30,62,80,0.22)' }}>
+            <div className="flex-1 min-w-0">
+              {p.precio_noche ? (
+                <>
+                  <p className="text-[10px] text-gray-400 leading-none mb-0.5">Desde</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-lg font-bold text-[#1E3E50] leading-none">${p.precio_noche.toLocaleString('es-CO')}</span>
+                    <span className="text-[11px] text-gray-400">/ noche</span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm font-semibold text-[#1E3E50]">Consultar precio</p>
+              )}
+            </div>
+            {waNum && (
+              <a href={waLink} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 text-white font-semibold px-5 py-3 rounded-xl text-sm flex-shrink-0 transition-all hover:scale-[1.03] active:scale-95"
+                style={waGlassStyle}>
+                <WhatsAppIcon size={16} />
+                Reservar
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── LIGHTBOX con thumbnails ── */}
       {lightboxOpen && (
-        <div
-          className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
-          onClick={() => setLightboxOpen(false)}
-        >
-          <button
-            onClick={() => setLightboxOpen(false)}
-            className="absolute top-4 right-4 text-white/70 hover:text-white p-2"
-          >
-            <X size={24} />
-          </button>
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: 'rgba(0,0,0,0.96)' }} onClick={() => setLightboxOpen(false)}>
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-5 py-3 flex-shrink-0" onClick={e => e.stopPropagation()}>
+            <span className="text-white/50 text-sm font-medium">{fotoIdx + 1} / {fotos.length}</span>
+            <button onClick={() => setLightboxOpen(false)}
+              className="text-white/70 hover:text-white p-2 rounded-xl transition-colors"
+              style={{ background: 'rgba(255,255,255,0.08)' }}>
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Imagen principal */}
+          <div className="flex-1 flex items-center justify-center relative px-14">
+            {fotos.length > 1 && (
+              <>
+                <button onClick={e => { e.stopPropagation(); setFotoIdx(i => (i - 1 + fotos.length) % fotos.length) }}
+                  className="absolute left-2 sm:left-4 w-10 h-10 flex items-center justify-center rounded-full text-white/70 hover:text-white transition-colors"
+                  style={{ background: 'rgba(255,255,255,0.08)' }}>
+                  <ChevronLeft size={22} />
+                </button>
+                <button onClick={e => { e.stopPropagation(); setFotoIdx(i => (i + 1) % fotos.length) }}
+                  className="absolute right-2 sm:right-4 w-10 h-10 flex items-center justify-center rounded-full text-white/70 hover:text-white transition-colors"
+                  style={{ background: 'rgba(255,255,255,0.08)' }}>
+                  <ChevronRight size={22} />
+                </button>
+              </>
+            )}
+            <img src={fotos[fotoIdx].url} alt=""
+              className="max-h-[70vh] max-w-full object-contain rounded-xl"
+              onClick={e => e.stopPropagation()} />
+          </div>
+
+          {/* Strip de thumbnails */}
           {fotos.length > 1 && (
-            <>
-              <button
-                onClick={e => { e.stopPropagation(); setFotoIdx(i => (i - 1 + fotos.length) % fotos.length) }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white p-2"
-              >
-                <ChevronLeft size={32} />
-              </button>
-              <button
-                onClick={e => { e.stopPropagation(); setFotoIdx(i => (i + 1) % fotos.length) }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white p-2"
-              >
-                <ChevronRight size={32} />
-              </button>
-            </>
+            <div className="flex-shrink-0 flex gap-2 px-4 py-3 overflow-x-auto justify-center"
+              onClick={e => e.stopPropagation()}>
+              {fotos.map((f, i) => (
+                <button key={i} onClick={() => setFotoIdx(i)}
+                  className={`flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${
+                    i === fotoIdx ? 'border-white scale-110' : 'border-transparent opacity-45 hover:opacity-75'
+                  }`}>
+                  <img src={f.url} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
           )}
-          <img
-            src={fotos[fotoIdx].url}
-            alt=""
-            className="max-h-[90vh] max-w-[90vw] object-contain"
-            onClick={e => e.stopPropagation()}
-          />
-          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-sm">
-            {fotoIdx + 1} / {fotos.length}
-          </p>
         </div>
       )}
 
-      {/* ── WHATSAPP FLOTANTE (móvil) ── */}
-      {waNum && (
-        <a
-          href={waLink}
-          target="_blank" rel="noopener noreferrer"
-          className="lg:hidden fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-5 py-3.5 rounded-full transition-all hover:scale-105 active:scale-95"
-          style={waGlassStyle}
-        >
-          <WhatsAppIcon size={20} />
-          Consultar
-        </a>
-      )}
+
     </div>
   )
 }
