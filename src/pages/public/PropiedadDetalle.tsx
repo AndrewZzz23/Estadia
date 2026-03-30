@@ -45,6 +45,7 @@ export default function PropiedadDetalle() {
   const [scrolled, setScrolled]   = useState(false)
 
   const touchHeroX = useRef<number>(0)
+  const touchHeroY = useRef<number>(0)
   const ctaRef     = useRef<HTMLDivElement>(null)
   const [ctaVisible, setCtaVisible] = useState(false)
 
@@ -113,14 +114,15 @@ export default function PropiedadDetalle() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, calYear, calMonth])
 
-  // Scroll-reveal: añade clase in-view cuando los elementos entran al viewport
+  // Scroll-reveal: añade/quita in-view para que la animación se repita al bajar y subir
   useEffect(() => {
     if (!propiedad) return
     const io = new IntersectionObserver(
       entries => entries.forEach(e => {
-        if (e.isIntersecting) { e.target.classList.add('in-view'); io.unobserve(e.target) }
+        if (e.isIntersecting) e.target.classList.add('in-view')
+        else e.target.classList.remove('in-view')
       }),
-      { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
+      { threshold: 0.18, rootMargin: '0px 0px -80px 0px' }
     )
     document.querySelectorAll('[data-scroll]').forEach(el => io.observe(el))
     return () => io.disconnect()
@@ -183,12 +185,12 @@ export default function PropiedadDetalle() {
   return (
     <div className="min-h-screen bg-[#E8E4DE]">
       <style>{`
-        [data-scroll]{opacity:0;transform:translateY(28px);transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}
+        [data-scroll]{opacity:0;transform:translateY(40px);transition:opacity 1s cubic-bezier(.16,1,.3,1),transform 1s cubic-bezier(.16,1,.3,1)}
         [data-scroll].in-view{opacity:1;transform:translateY(0)}
-        [data-scroll][data-d="1"]{transition-delay:.08s}
-        [data-scroll][data-d="2"]{transition-delay:.16s}
-        [data-scroll][data-d="3"]{transition-delay:.24s}
-        [data-scroll][data-d="4"]{transition-delay:.32s}
+        [data-scroll][data-d="1"]{transition-delay:.15s}
+        [data-scroll][data-d="2"]{transition-delay:.3s}
+        [data-scroll][data-d="3"]{transition-delay:.45s}
+        [data-scroll][data-d="4"]{transition-delay:.6s}
       `}</style>
 
       {/* ── HEADER glass ── */}
@@ -229,11 +231,17 @@ export default function PropiedadDetalle() {
             <div
               className="sm:hidden relative overflow-hidden cursor-pointer"
               style={{ height: '85vh' }}
-              onTouchStart={e => { touchHeroX.current = e.touches[0].clientX }}
+              onTouchStart={e => {
+                touchHeroX.current = e.touches[0].clientX
+                touchHeroY.current = e.touches[0].clientY
+              }}
               onTouchEnd={e => {
-                const diff = touchHeroX.current - e.changedTouches[0].clientX
-                if (Math.abs(diff) < 40) { setLightboxOpen(true); return }
-                if (diff > 0) setFotoIdx(i => (i + 1) % fotos.length)
+                const dx = touchHeroX.current - e.changedTouches[0].clientX
+                const dy = touchHeroY.current - e.changedTouches[0].clientY
+                // Si el movimiento vertical supera al horizontal es scroll de página → ignorar
+                if (Math.abs(dy) > Math.abs(dx)) return
+                if (Math.abs(dx) < 40) { setLightboxOpen(true); return }
+                if (dx > 0) setFotoIdx(i => (i + 1) % fotos.length)
                 else setFotoIdx(i => (i - 1 + fotos.length) % fotos.length)
               }}
               onClick={() => setLightboxOpen(true)}
@@ -687,7 +695,7 @@ export default function PropiedadDetalle() {
           </div>
 
           {/* Imagen principal */}
-          <div className="flex-1 flex items-center justify-center relative px-14">
+          <div className="flex-1 flex items-center justify-center relative">
             {fotos.length > 1 && (
               <>
                 <button onClick={e => { e.stopPropagation(); setFotoIdx(i => (i - 1 + fotos.length) % fotos.length) }}
@@ -703,7 +711,7 @@ export default function PropiedadDetalle() {
               </>
             )}
             <img src={fotos[fotoIdx].url} alt=""
-              className="max-h-[70vh] max-w-full object-contain rounded-xl"
+              className="max-w-full max-h-full object-contain"
               onClick={e => e.stopPropagation()} />
           </div>
 
