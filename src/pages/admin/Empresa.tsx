@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
+import type { Tenant } from '../../types/database'
 import { ImagePlus, X, Upload, Copy, Check, Link } from 'lucide-react'
 import { youtubeEmbed, esVideoDirecto } from '../../lib/media'
 
