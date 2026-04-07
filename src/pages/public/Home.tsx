@@ -2,24 +2,20 @@ import { Link } from 'react-router-dom'
 import Logo from '../../components/Logo'
 import { Globe, Smartphone, CalendarDays, TrendingUp, ArrowRight, MessageCircle, Receipt } from 'lucide-react'
 
-/* ── Importa tus pantallazos aquí cuando los tengas ──
-   import screenshotDash   from '../../assets/screenshots/dashboard.png'
-   import screenshotReservas from '../../assets/screenshots/reservas.png'
-   import screenshotCal    from '../../assets/screenshots/calendario.png'
-   import screenshotGastos from '../../assets/screenshots/gastos.png'
-*/
+import screenshotDash  from '../../assets/screenshots/dashboard.png'
+import screenshotRes   from '../../assets/screenshots/reservas.png'
+import screenshotCal   from '../../assets/screenshots/calendario.png'
 
-// Placeholder temporal — reemplaza con import real
 const SCREENSHOTS = {
-  dashboard:  null as string | null,
-  reservas:   null as string | null,
-  calendario: null as string | null,
+  dashboard:  screenshotDash  as string,
+  reservas:   screenshotRes   as string,
+  calendario: screenshotCal   as string,
   gastos:     null as string | null,
 }
 
 function PhoneMockup({ src, label, color = '#1E3E50' }: { src: string | null; label: string; color?: string }) {
   return (
-    <div className="relative flex-shrink-0 w-[200px] sm:w-[220px]">
+    <div className="relative flex-shrink-0 w-[240px] sm:w-[280px]">
       {/* Marco del teléfono */}
       <div
         className="relative rounded-[32px] overflow-hidden shadow-2xl"
@@ -202,13 +198,13 @@ export default function Home() {
 
             {/* ── MOCKUPS HERO — 3 teléfonos ── */}
             <div className="flex items-end justify-center gap-4 sm:gap-6">
-              <div className="hidden sm:block" style={{ transform: 'translateY(20px) rotate(-6deg)', transformOrigin: 'bottom center', opacity: 0.85 }}>
+                <div className="hidden sm:block" style={{ transform: 'translateY(30px) rotate(-5deg)', transformOrigin: 'bottom center', opacity: 0.9 }}>
                 <PhoneMockup src={SCREENSHOTS.reservas} label="Reservas" color="#2A7A68" />
               </div>
               <div style={{ transform: 'translateY(0px)', zIndex: 2 }}>
                 <PhoneMockup src={SCREENSHOTS.dashboard} label="Dashboard" color="#64B5A0" />
               </div>
-              <div className="hidden sm:block" style={{ transform: 'translateY(20px) rotate(6deg)', transformOrigin: 'bottom center', opacity: 0.85 }}>
+              <div className="hidden sm:block" style={{ transform: 'translateY(30px) rotate(5deg)', transformOrigin: 'bottom center', opacity: 0.9 }}>
                 <PhoneMockup src={SCREENSHOTS.calendario} label="Calendario" color="#1E3E50" />
               </div>
             </div>

@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
 import type { CategoriaGasto } from '../../types/database'
 import { X, Trash2, Receipt, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useSheetDrag } from '../../hooks/useSheetDrag'
 
 const CATEGORIAS: Record<CategoriaGasto, { label: string; emoji: string }> = {
   aseo:          { label: 'Aseo',          emoji: '🧹' },
@@ -40,6 +41,7 @@ function infoMes(year: number, month: number) {
 
 export default function GastosHistorialPanel({ open, onClose }: Props) {
   const { tenant } = useTenant()
+  const { handleProps, sheetStyle } = useSheetDrag(open, onClose)
   const hoy = new Date()
   const [year, setYear]   = useState(hoy.getFullYear())
   const [month, setMonth] = useState(hoy.getMonth())
@@ -89,7 +91,7 @@ export default function GastosHistorialPanel({ open, onClose }: Props) {
       bottom-0 left-0 right-0 rounded-t-3xl max-h-[92vh]
       sm:top-0 sm:bottom-0 sm:left-auto sm:right-0 sm:w-[400px] sm:rounded-none sm:rounded-l-2xl sm:max-h-full
       ${open ? 'translate-y-0 sm:translate-x-0 transition-transform duration-300' : 'translate-y-full sm:translate-y-0 sm:translate-x-full pointer-events-none'}`}
-      style={{ background: '#fff' }}
+      style={{ background: '#fff', ...sheetStyle }}
     >
       {/* ── Hero header — mismo estilo que la card ── */}
       <div
@@ -97,7 +99,7 @@ export default function GastosHistorialPanel({ open, onClose }: Props) {
         style={{ background: CARD_GRADIENT, boxShadow: CARD_SHADOW }}
       >
         {/* Drag handle blanco — solo móvil */}
-        <div className="sm:hidden flex justify-center mb-4 -mt-2">
+        <div className="sm:hidden flex justify-center mb-4 -mt-2 cursor-grab active:cursor-grabbing" {...handleProps}>
           <div className="w-10 h-1 rounded-full bg-white/40" />
         </div>
 
