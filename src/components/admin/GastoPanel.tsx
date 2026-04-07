@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
 import type { CategoriaGasto, Propiedad } from '../../types/database'
 import { X } from 'lucide-react'
+import { useSheetDrag } from '../../hooks/useSheetDrag'
 import { navyGlassStyle } from '../../lib/styles'
 
 const CATEGORIAS: { value: CategoriaGasto; label: string; emoji: string }[] = [
@@ -24,6 +25,7 @@ interface Props {
 
 export default function GastoPanel({ open, onClose, onCreated }: Props) {
   const { tenant } = useTenant()
+  const { handleProps, sheetStyle } = useSheetDrag(open, onClose)
   const [propiedades, setPropiedades] = useState<Pick<Propiedad, 'id' | 'nombre'>[]>([])
   const [categoria,    setCategoria]   = useState<CategoriaGasto>('aseo')
   const [monto,        setMonto]       = useState('')
@@ -74,9 +76,10 @@ export default function GastoPanel({ open, onClose, onCreated }: Props) {
       ${open
         ? 'translate-y-0 sm:translate-x-0 transition-transform duration-300'
         : 'translate-y-full sm:translate-y-0 sm:translate-x-full pointer-events-none'}`}
+      style={sheetStyle}
     >
       {/* Drag handle — solo móvil */}
-      <div className="sm:hidden flex justify-center pt-3 pb-1">
+      <div className="sm:hidden flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing" {...handleProps}>
         <div className="w-10 h-1 bg-gray-200 rounded-full" />
       </div>
 

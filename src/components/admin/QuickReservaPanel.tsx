@@ -4,6 +4,7 @@ import { useTenant } from '../../contexts/TenantContext'
 import type { Propiedad } from '../../types/database'
 import { X } from 'lucide-react'
 import { navyGlassStyle } from '../../lib/styles'
+import { useSheetDrag } from '../../hooks/useSheetDrag'
 
 type QuickForm = {
   propiedad_id: string
@@ -37,6 +38,7 @@ interface Props {
 
 export default function QuickReservaPanel({ open, onClose, fechaInicio, propiedadDefault = '', onCreated }: Props) {
   const { tenant } = useTenant()
+  const { handleProps, sheetStyle } = useSheetDrag(open, onClose)
   const [propiedades, setPropiedades] = useState<Pick<Propiedad, 'id' | 'nombre'>[]>([])
   const [form, setForm]           = useState<QuickForm>(emptyForm())
   const [guardando, setGuardando] = useState(false)
@@ -123,9 +125,10 @@ export default function QuickReservaPanel({ open, onClose, fechaInicio, propieda
       bottom-0 left-0 right-0 rounded-t-3xl max-h-[92vh] overflow-y-auto overflow-x-hidden
       sm:top-0 sm:bottom-0 sm:left-auto sm:right-0 sm:w-[400px] sm:rounded-none sm:rounded-l-2xl sm:max-h-full
       ${open ? 'translate-y-0 sm:translate-x-0 transition-transform duration-300' : 'translate-y-full sm:translate-y-0 sm:translate-x-full pointer-events-none'}`}
+      style={sheetStyle}
     >
       {/* Drag handle — solo móvil */}
-      <div className="sm:hidden flex justify-center pt-3 pb-1">
+      <div className="sm:hidden flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing" {...handleProps}>
         <div className="w-10 h-1 bg-gray-200 rounded-full" />
       </div>
 
