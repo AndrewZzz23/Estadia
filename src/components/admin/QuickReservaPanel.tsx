@@ -120,7 +120,7 @@ export default function QuickReservaPanel({ open, onClose, fechaInicio, propieda
 
   return (
     <div className={`fixed z-50 bg-white shadow-2xl ease-out
-      bottom-0 left-0 right-0 rounded-t-3xl max-h-[92vh] overflow-y-auto
+      bottom-0 left-0 right-0 rounded-t-3xl max-h-[92vh] overflow-y-auto overflow-x-hidden
       sm:top-0 sm:bottom-0 sm:left-auto sm:right-0 sm:w-[400px] sm:rounded-none sm:rounded-l-2xl sm:max-h-full
       ${open ? 'translate-y-0 sm:translate-x-0 transition-transform duration-300' : 'translate-y-full sm:translate-y-0 sm:translate-x-full pointer-events-none'}`}
     >
@@ -151,15 +151,17 @@ export default function QuickReservaPanel({ open, onClose, fechaInicio, propieda
           </select>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Entrada *</label>
-            <input type="date" value={form.fecha_inicio} onChange={e => set('fecha_inicio', e.target.value)} className={inp} />
+            <input type="date" value={form.fecha_inicio} onChange={e => set('fecha_inicio', e.target.value)}
+              className={inp} style={{ maxWidth: '100%' }} />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Salida *</label>
             <input type="date" value={form.fecha_fin} onChange={e => set('fecha_fin', e.target.value)}
               min={form.fecha_inicio || undefined}
+              style={{ maxWidth: '100%' }}
               className={`${inp} ${form.fecha_fin && form.fecha_inicio && form.fecha_fin <= form.fecha_inicio ? 'border-red-300 ring-1 ring-red-200' : ''}`} />
           </div>
         </div>

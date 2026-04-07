@@ -132,7 +132,7 @@ export default function GastoPanel({ open, onClose, onCreated }: Props) {
         </div>
 
         {/* Fecha + Propiedad */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Fecha</label>
             <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className={inp} />
