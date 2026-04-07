@@ -140,8 +140,8 @@ export default function AdminLayout() {
         <main
           className="absolute inset-0 overflow-y-auto"
           style={{
-            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px)',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)',
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 56px)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)',
             overscrollBehavior: 'none',
             backgroundColor: '#EEF0F4',
           }}
@@ -151,9 +151,9 @@ export default function AdminLayout() {
 
         {/* Top bar — absolute encima del scroll */}
         <div
-          className="absolute top-0 left-0 right-0 z-10 flex items-center gap-3 px-4 pb-3"
+          className="absolute top-0 left-0 right-0 z-10 flex items-center gap-3 px-4 pb-2"
           style={{
-            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 6px)',
             background: 'rgba(16,24,32,0.55)',
             backdropFilter: 'saturate(180%) blur(24px)',
             WebkitBackdropFilter: 'saturate(180%) blur(24px)',
@@ -229,7 +229,7 @@ export default function AdminLayout() {
             backdropFilter: 'saturate(180%) blur(24px)',
             WebkitBackdropFilter: 'saturate(180%) blur(24px)',
             borderTop: '1px solid rgba(255,255,255,0.10)',
-            paddingBottom: 'env(safe-area-inset-bottom, 8px)',
+            paddingBottom: 'env(safe-area-inset-bottom, 4px)',
             touchAction: 'none',
           }}
         >

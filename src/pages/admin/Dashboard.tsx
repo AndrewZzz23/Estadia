@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
-import { CalendarCheck, CalendarClock, TrendingUp, ArrowRight, Users, Receipt } from 'lucide-react'
+import { CalendarCheck, CalendarClock, TrendingUp, ArrowRight, Receipt } from 'lucide-react'
 import { getFestivos } from '../../lib/festivos'
 import { navyGlassStyle } from '../../lib/styles'
 import QuickReservaPanel from '../../components/admin/QuickReservaPanel'
@@ -74,7 +74,7 @@ async function getPropiedadIds(tenantId: string) {
 export default function Dashboard() {
   const { tenant } = useTenant()
   const [metricas, setMetricas]   = useState<Metricas>({ propiedades: 0, reservasActivas: 0, reservasMes: 0, ingresosMes: 0, gastosMes: 0 })
-  const [proximas, setProximas]         = useState<ProximaReserva[]>([])
+  const [, setProximas]         = useState<ProximaReserva[]>([])
   const [semanaProps, setSemanaProps]   = useState<{ id: string; nombre: string }[]>([])
   const [semanaRes, setSemanaRes]       = useState<{ propiedad_id: string; fecha_inicio: string; fecha_fin: string; cliente_nombre: string }[]>([])
   const [loading, setLoading]           = useState(true)
@@ -174,10 +174,6 @@ export default function Dashboard() {
     }
   })
 
-  function fmtFecha(iso: string) {
-    const [, m, d] = iso.split('-')
-    return `${d}/${m}`
-  }
 
   return (
     <div className="p-4 sm:p-8 max-w-4xl mx-auto">
@@ -299,52 +295,6 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* ── Próximas reservas ── */}
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
-            <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100">
-              <p className="text-sm font-semibold text-gray-800">Próximas reservas</p>
-              <Link to="/admin/reservas" className="flex items-center gap-1 text-xs text-[#2A7A68] hover:underline">
-                Ver todas <ArrowRight size={12} />
-              </Link>
-            </div>
-
-            {proximas.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-gray-300 gap-2">
-                <CalendarCheck size={28} />
-                <p className="text-sm">Sin reservas próximas</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-50">
-                {proximas.map(r => (
-                  <Link
-                    key={r.id}
-                    to={`/admin/reservas/${r.id}/editar`}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                  >
-                    {/* Avatar inicial */}
-                    <div className="w-8 h-8 rounded-xl bg-[#2A7A68]/10 flex items-center justify-center flex-shrink-0">
-                      <Users size={14} className="text-[#2A7A68]" />
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{r.cliente_nombre}</p>
-                      <p className="text-xs text-gray-400 truncate">{r.propiedad_nombre}</p>
-                    </div>
-
-                    {/* Fechas + monto */}
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs font-medium text-gray-600">{fmtFecha(r.fecha_inicio)} → {fmtFecha(r.fecha_fin)}</p>
-                      {r.monto_total != null && (
-                        <p className="text-xs text-[#2A7A68] font-semibold">${r.monto_total.toLocaleString('es-CO')}</p>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* ── Accesos rápidos ── */}
