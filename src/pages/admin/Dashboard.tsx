@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
-import { CalendarCheck, CalendarClock, TrendingUp, ArrowRight, Receipt } from 'lucide-react'
+import { CalendarCheck, CalendarClock, TrendingUp, ArrowRight, Receipt, Globe, Copy, Check as CheckIcon } from 'lucide-react'
 import { getFestivos } from '../../lib/festivos'
 import { navyGlassStyle } from '../../lib/styles'
 import QuickReservaPanel from '../../components/admin/QuickReservaPanel'
@@ -82,6 +82,7 @@ export default function Dashboard() {
   const [gastoOpen, setGastoOpen]             = useState(false)
   const [gastosHistorialOpen, setGastosHistorialOpen]     = useState(false)
   const [ingresosHistorialOpen, setIngresosHistorialOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (!tenant) return
@@ -351,6 +352,27 @@ export default function Dashboard() {
             open={ingresosHistorialOpen}
             onClose={() => setIngresosHistorialOpen(false)}
           />
+
+          {/* ── Web link ── */}
+          {tenant?.slug && (() => {
+            const url = `${window.location.origin}/${tenant.slug}`
+            return (
+              <div className="mt-6 flex items-center gap-2 px-4 py-3 rounded-2xl bg-white border border-gray-100 shadow-sm">
+                <Globe size={15} className="text-[#2A7A68] flex-shrink-0" />
+                <a href={url} target="_blank" rel="noopener noreferrer"
+                  className="flex-1 text-sm text-[#2A7A68] font-medium truncate hover:underline">
+                  {url}
+                </a>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+                  className="flex-shrink-0 p-1.5 rounded-lg transition-colors hover:bg-gray-100"
+                  title="Copiar enlace"
+                >
+                  {copied ? <CheckIcon size={14} className="text-[#2A7A68]" /> : <Copy size={14} className="text-gray-400" />}
+                </button>
+              </div>
+            )
+          })()}
         </>
       )}
     </div>
