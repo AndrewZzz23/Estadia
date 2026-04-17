@@ -189,7 +189,7 @@ export default function PropiedadDetalle() {
   }
 
   function onCarouselScroll() {
-    clearTimeout(scrollTimer.current)
+    if (scrollTimer.current !== null) clearTimeout(scrollTimer.current)
     scrollTimer.current = setTimeout(() => {
       if (!carouselRef.current) return
       const i = Math.round(carouselRef.current.scrollLeft / carouselRef.current.clientWidth)
