@@ -62,6 +62,17 @@ export default function PropiedadDetalle() {
   }, [])
 
   useEffect(() => {
+    if (!lightboxOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') setFotoIdx(i => (i + 1) % fotos.length)
+      else if (e.key === 'ArrowLeft') setFotoIdx(i => (i - 1 + fotos.length) % fotos.length)
+      else if (e.key === 'Escape') setLightboxOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightboxOpen, fotos.length])
+
+  useEffect(() => {
     async function cargar() {
       const { data: t } = await supabase
         .from('tenants').select('*').eq('slug', slug!).eq('activa', true).maybeSingle()
