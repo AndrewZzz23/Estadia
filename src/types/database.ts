@@ -42,6 +42,7 @@ export interface Propiedad {
   precio_noche: number | null
   precio_semana: number | null
   precio_mes: number | null
+  precio_persona_extra: number | null
   capacidad: number | null
   habitaciones: number | null
   banos: number | null

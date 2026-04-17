@@ -29,14 +29,14 @@ const AMENIDADES_ICONOS: Record<string, LucideIcon> = {
 type FormData = {
   nombre: string; descripcion: string; ubicacion: string
   latitud: number | null; longitud: number | null
-  precio_noche: string; precio_semana: string; precio_mes: string
+  precio_noche: string; precio_semana: string; precio_mes: string; precio_persona_extra: string
   capacidad: string; habitaciones: string; banos: string
   amenidades: string[]; activa: boolean; ical_url: string
 }
 
 const EMPTY: FormData = {
   nombre: '', descripcion: '', ubicacion: '', latitud: null, longitud: null,
-  precio_noche: '', precio_semana: '', precio_mes: '',
+  precio_noche: '', precio_semana: '', precio_mes: '', precio_persona_extra: '',
   capacidad: '', habitaciones: '', banos: '', amenidades: [], activa: true, ical_url: '',
 }
 
@@ -103,9 +103,10 @@ export default function PropiedadFormPanel({ open, propiedadId, onClose, onSaved
               ubicacion:     p.ubicacion ?? '',
               latitud:       p.latitud ?? null,
               longitud:      p.longitud ?? null,
-              precio_noche:  p.precio_noche?.toString() ?? '',
-              precio_semana: p.precio_semana?.toString() ?? '',
-              precio_mes:    p.precio_mes?.toString() ?? '',
+              precio_noche:         p.precio_noche?.toString() ?? '',
+              precio_semana:        p.precio_semana?.toString() ?? '',
+              precio_mes:           p.precio_mes?.toString() ?? '',
+              precio_persona_extra: p.precio_persona_extra?.toString() ?? '',
               capacidad:     p.capacidad?.toString() ?? '',
               habitaciones:  p.habitaciones?.toString() ?? '',
               banos:         p.banos?.toString() ?? '',
@@ -144,9 +145,10 @@ export default function PropiedadFormPanel({ open, propiedadId, onClose, onSaved
       ubicacion:     form.ubicacion.trim() || null,
       latitud:       form.latitud,
       longitud:      form.longitud,
-      precio_noche:  numOrNull(form.precio_noche),
-      precio_semana: numOrNull(form.precio_semana),
-      precio_mes:    numOrNull(form.precio_mes),
+      precio_noche:         numOrNull(form.precio_noche),
+      precio_semana:        numOrNull(form.precio_semana),
+      precio_mes:           numOrNull(form.precio_mes),
+      precio_persona_extra: numOrNull(form.precio_persona_extra),
       capacidad:     numOrNull(form.capacidad),
       habitaciones:  numOrNull(form.habitaciones),
       banos:         numOrNull(form.banos),
@@ -261,7 +263,7 @@ export default function PropiedadFormPanel({ open, propiedadId, onClose, onSaved
 
                 <div className="border-t border-gray-100 pt-4">
                   <Sec>Precios</Sec>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-2 mb-2">
                     {([['precio_noche','Noche','350.000'],['precio_semana','Semana','2.000.000'],['precio_mes','Mes','6.000.000']] as const).map(([field, label, ph]) => (
                       <Field key={field} label={label}>
                         <div className="relative">
@@ -274,6 +276,15 @@ export default function PropiedadFormPanel({ open, propiedadId, onClose, onSaved
                       </Field>
                     ))}
                   </div>
+                  <Field label="Persona extra (por noche)">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                      <input type="text" inputMode="numeric"
+                        value={fmtPrecio(form.precio_persona_extra)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => set('precio_persona_extra', e.target.value.replace(/\D/g, ''))}
+                        className={`${inp} pl-6 text-xs`} placeholder="30.000" />
+                    </div>
+                  </Field>
                 </div>
               </div>
 

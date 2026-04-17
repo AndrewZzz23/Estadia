@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
@@ -58,7 +58,17 @@ export default function Calendario() {
   }
   const inicializado = propiedades.length > 0 || !loading
 
-  useEffect(() => { cargar() }, [tenant, year, month]) // eslint-disable-line react-hooks/exhaustive-deps
+  const syncedOnMount = useRef(false)
+  useEffect(() => {
+    if (!tenant) return
+    // Sincroniza iCal automáticamente solo en la primera carga
+    if (!syncedOnMount.current) {
+      syncedOnMount.current = true
+      sincronizarIcal().then(() => cargar())
+    } else {
+      cargar()
+    }
+  }, [tenant, year, month]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function cargar() {
     if (!tenant) return

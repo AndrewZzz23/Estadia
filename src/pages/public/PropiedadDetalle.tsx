@@ -44,9 +44,10 @@ export default function PropiedadDetalle() {
   const [loading, setLoading]     = useState(true)
   const [scrolled, setScrolled]   = useState(false)
 
-  const touchHeroX = useRef<number>(0)
-  const touchHeroY = useRef<number>(0)
-  const ctaRef     = useRef<HTMLDivElement>(null)
+  const touchHeroX  = useRef<number>(0)
+  const carouselRef = useRef<HTMLDivElement>(null)
+  const scrollTimer   = useRef<ReturnType<typeof setTimeout>>()
+  const ctaRef        = useRef<HTMLDivElement>(null)
   const [ctaVisible, setCtaVisible] = useState(false)
 
   const hoy = new Date()
@@ -182,6 +183,20 @@ export default function PropiedadDetalle() {
   const hoyStr  = ymd(hoy)
   const festivos = getFestivos(calYear)
 
+  function scrollToFoto(i: number) {
+    if (!carouselRef.current) return
+    carouselRef.current.scrollTo({ left: i * carouselRef.current.clientWidth, behavior: 'smooth' })
+  }
+
+  function onCarouselScroll() {
+    clearTimeout(scrollTimer.current)
+    scrollTimer.current = setTimeout(() => {
+      if (!carouselRef.current) return
+      const i = Math.round(carouselRef.current.scrollLeft / carouselRef.current.clientWidth)
+      setFotoIdx(Math.max(0, Math.min(i, fotos.length - 1)))
+    }, 50)
+  }
+
   return (
     <div className="min-h-screen bg-[#E8E4DE]">
       <style>{`
@@ -224,34 +239,29 @@ export default function PropiedadDetalle() {
       </header>
 
       {/* ── HERO ── */}
-      <section className="relative">
+      <section className="relative overflow-hidden">
         {fotos.length > 0 ? (
           <>
-            {/* Mobile: carrusel swipeable */}
-            <div
-              className="sm:hidden relative overflow-hidden cursor-pointer"
-              style={{ height: '85vh' }}
-              onTouchStart={e => {
-                touchHeroX.current = e.touches[0].clientX
-                touchHeroY.current = e.touches[0].clientY
-              }}
-              onTouchEnd={e => {
-                const dx = touchHeroX.current - e.changedTouches[0].clientX
-                const dy = touchHeroY.current - e.changedTouches[0].clientY
-                // Si el movimiento vertical supera al horizontal es scroll de página → ignorar
-                if (Math.abs(dy) > Math.abs(dx)) return
-                if (Math.abs(dx) < 40) { setLightboxOpen(true); return }
-                if (dx > 0) setFotoIdx(i => (i + 1) % fotos.length)
-                else setFotoIdx(i => (i - 1 + fotos.length) % fotos.length)
-              }}
-              onClick={() => setLightboxOpen(true)}
-            >
-              <img src={fotos[fotoIdx].url} alt={p.nombre} className="w-full h-full object-cover" />
+            {/* Mobile: carrusel con scroll-snap nativo */}
+            <div className="sm:hidden relative overflow-hidden" style={{ height: '85vh' }}>
+              <div
+                ref={carouselRef}
+                className="flex h-full overflow-x-scroll snap-x snap-mandatory"
+                style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+                onScroll={onCarouselScroll}
+              >
+                {fotos.map((f, i) => (
+                  <div key={i} className="flex-shrink-0 w-full h-full snap-center"
+                    onClick={() => { setFotoIdx(i); setLightboxOpen(true) }}>
+                    <img src={f.url} alt={p.nombre} className="w-full h-full object-cover pointer-events-none" />
+                  </div>
+                ))}
+              </div>
               <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/75 pointer-events-none" />
               {fotos.length > 1 && (
-                <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex gap-1.5">
+                <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-auto">
                   {fotos.map((_, i) => (
-                    <button key={i} onClick={() => setFotoIdx(i)}
+                    <button key={i} onClick={() => scrollToFoto(i)}
                       className={`rounded-full transition-all ${i === fotoIdx ? 'w-5 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/50'}`} />
                   ))}
                 </div>
@@ -261,7 +271,7 @@ export default function PropiedadDetalle() {
             {/* Desktop: mosaico */}
             <div
               className="hidden sm:grid"
-              style={{ gridTemplateColumns: fotos.length > 1 ? '1fr 300px' : '1fr', gap: '3px', height: '82vh' }}
+              style={{ gridTemplateColumns: fotos.length > 1 ? '1fr clamp(260px, 28%, 400px)' : '1fr', gap: '3px', height: '440px' }}
             >
               {/* Foto principal */}
               <div className="relative overflow-hidden cursor-zoom-in" onClick={() => setLightboxOpen(true)}>
@@ -327,28 +337,6 @@ export default function PropiedadDetalle() {
                   <MapPin size={11} />{p.ubicacion}
                 </div>
               )}
-              {(p.capacidad || p.habitaciones || p.banos) && (
-                <div className="flex flex-wrap items-center gap-1.5 mt-3">
-                  {p.capacidad && (
-                    <span className="inline-flex items-center gap-1 text-[11px] text-white/80 px-2.5 py-1 rounded-full"
-                      style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}>
-                      <Users size={10} />{p.capacidad} pers.
-                    </span>
-                  )}
-                  {p.habitaciones && (
-                    <span className="inline-flex items-center gap-1 text-[11px] text-white/80 px-2.5 py-1 rounded-full"
-                      style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}>
-                      <BedDouble size={10} />{p.habitaciones} hab.
-                    </span>
-                  )}
-                  {p.banos && (
-                    <span className="inline-flex items-center gap-1 text-[11px] text-white/80 px-2.5 py-1 rounded-full"
-                      style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}>
-                      <Bath size={10} />{p.banos} baños
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -370,6 +358,44 @@ export default function PropiedadDetalle() {
                     <MapPin size={12} />{p.ubicacion}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Capacidad / habitaciones / baños */}
+            {(p.capacidad || p.habitaciones || p.banos) && (
+              <div data-scroll className="bg-white rounded-3xl px-6 py-5 shadow-sm">
+                <div className="flex divide-x divide-gray-100">
+                  {p.capacidad && (
+                    <div className="flex-1 flex flex-col items-center gap-1 px-3 first:pl-0 last:pr-0">
+                      <div className="w-9 h-9 rounded-2xl flex items-center justify-center"
+                        style={{ background: 'rgba(42,122,104,0.10)' }}>
+                        <Users size={16} className="text-[#2A7A68]" />
+                      </div>
+                      <p className="text-xl font-bold text-[#1E3E50] leading-none">{p.capacidad}</p>
+                      <p className="text-[11px] text-gray-400">personas</p>
+                    </div>
+                  )}
+                  {p.habitaciones && (
+                    <div className="flex-1 flex flex-col items-center gap-1 px-3 first:pl-0 last:pr-0">
+                      <div className="w-9 h-9 rounded-2xl flex items-center justify-center"
+                        style={{ background: 'rgba(42,122,104,0.10)' }}>
+                        <BedDouble size={16} className="text-[#2A7A68]" />
+                      </div>
+                      <p className="text-xl font-bold text-[#1E3E50] leading-none">{p.habitaciones}</p>
+                      <p className="text-[11px] text-gray-400">habitaciones</p>
+                    </div>
+                  )}
+                  {p.banos && (
+                    <div className="flex-1 flex flex-col items-center gap-1 px-3 first:pl-0 last:pr-0">
+                      <div className="w-9 h-9 rounded-2xl flex items-center justify-center"
+                        style={{ background: 'rgba(42,122,104,0.10)' }}>
+                        <Bath size={16} className="text-[#2A7A68]" />
+                      </div>
+                      <p className="text-xl font-bold text-[#1E3E50] leading-none">{p.banos}</p>
+                      <p className="text-[11px] text-gray-400">baños</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -421,11 +447,21 @@ export default function PropiedadDetalle() {
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                 />
-                <div className="px-7 py-4">
+                <div className="px-5 py-4">
                   <a href={`https://www.google.com/maps?q=${p.latitud},${p.longitud}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#2A7A68] hover:underline">
-                    <MapPin size={11} />Abrir en Google Maps
+                    className="flex items-center justify-center gap-2.5 w-full px-4 py-2.5 rounded-2xl transition-all hover:scale-[1.02] active:scale-95"
+                    style={{ background: 'rgba(66,133,244,0.08)', border: '1px solid rgba(66,133,244,0.18)' }}>
+                    {/* Google Maps logo SVG */}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#EA4335"/>
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 1.63.5 3.14 1.36 4.38L12 2z" fill="#B31412"/>
+                      <circle cx="12" cy="9" r="2.5" fill="white"/>
+                    </svg>
+                    <span className="text-sm font-semibold" style={{ color: '#4285F4' }}>Abrir en Google Maps</span>
+                    <svg width="12" height="12" fill="none" stroke="#4285F4" strokeWidth={2} strokeOpacity={0.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6m0 0v6m0-6L10 14"/>
+                    </svg>
                   </a>
                 </div>
               </div>
@@ -469,10 +505,15 @@ export default function PropiedadDetalle() {
                   const pasado  = d < hoyStr
                   const ocupado = ocupados.has(d)
                   const festivo = festivos.get(d)
-                  const esDom   = dia.getDay() === 0
+                  const esDom      = dia.getDay() === 0
+                  const disponible = esMes && !ocupado && (!pasado || esHoy) && !!waNum
+                  const fechaLabel = dia.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                  const waMsgDia   = encodeURIComponent(`Hola, me interesa reservar "${p.nombre}" para el ${fechaLabel}. ¿Está disponible?`)
                   return (
                     <div key={i} title={festivo}
+                      onClick={disponible ? () => window.open(`https://wa.me/${waNum}?text=${waMsgDia}`, '_blank') : undefined}
                       className={`h-10 flex items-center justify-center rounded-xl text-xs font-medium transition-all
+                        ${disponible ? 'cursor-pointer active:scale-90' : ''}
                         ${!esMes ? 'opacity-20' : ''}
                         ${ocupado && esMes ? 'bg-red-100 text-red-500 font-semibold' : ''}
                         ${festivo && !ocupado && esMes ? 'bg-amber-100 text-amber-500 font-bold' : ''}
@@ -493,7 +534,7 @@ export default function PropiedadDetalle() {
               </div>
 
               {/* Leyenda */}
-              <div className="flex gap-4 px-6 py-3 border-t border-gray-100 flex-wrap">
+              <div className="flex gap-4 px-6 py-3 border-t border-gray-100 flex-wrap items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#2A7A68]" />
                   <span className="text-gray-400 text-xs">Hoy</span>
@@ -506,6 +547,7 @@ export default function PropiedadDetalle() {
                   <span className="w-2.5 h-2.5 rounded-md bg-amber-100 border border-amber-300" />
                   <span className="text-gray-400 text-xs">Festivo</span>
                 </div>
+                {waNum && <p className="text-[10px] text-[#2A7A68]/70 ml-auto">Toca un día libre para consultar</p>}
               </div>
             </div>
           </div>
@@ -532,7 +574,7 @@ export default function PropiedadDetalle() {
                   ) : (
                     <p className="text-white/60 text-sm font-medium">Consultar precio</p>
                   )}
-                  {(p.precio_semana || p.precio_mes) && (
+                  {(p.precio_semana || p.precio_mes || p.precio_persona_extra) && (
                     <div className="flex gap-5 mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                       {p.precio_semana && (
                         <div>
@@ -544,6 +586,12 @@ export default function PropiedadDetalle() {
                         <div>
                           <p className="text-[9px] uppercase tracking-widest text-white/30">Mes</p>
                           <p className="text-white/75 font-semibold text-sm">${p.precio_mes.toLocaleString('es-CO')}</p>
+                        </div>
+                      )}
+                      {p.precio_persona_extra && (
+                        <div>
+                          <p className="text-[9px] uppercase tracking-widest text-white/30">Persona extra</p>
+                          <p className="text-white/75 font-semibold text-sm">${p.precio_persona_extra.toLocaleString('es-CO')}</p>
                         </div>
                       )}
                     </div>
@@ -603,7 +651,7 @@ export default function PropiedadDetalle() {
                       </span>
                       <span className="text-white/40 text-base mb-1.5">/ noche</span>
                     </div>
-                    {(p.precio_semana || p.precio_mes) && (
+                    {(p.precio_semana || p.precio_mes || p.precio_persona_extra) && (
                       <div className="flex justify-center gap-8 mt-4 pt-4"
                         style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                         {p.precio_semana && (
@@ -616,6 +664,12 @@ export default function PropiedadDetalle() {
                           <div>
                             <p className="text-[10px] uppercase tracking-widest text-white/30">Mes</p>
                             <p className="text-white/70 font-semibold">${p.precio_mes.toLocaleString('es-CO')}</p>
+                          </div>
+                        )}
+                        {p.precio_persona_extra && (
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-white/30">Persona extra</p>
+                            <p className="text-white/70 font-semibold">${p.precio_persona_extra.toLocaleString('es-CO')}</p>
                           </div>
                         )}
                       </div>
@@ -695,24 +749,32 @@ export default function PropiedadDetalle() {
           </div>
 
           {/* Imagen principal */}
-          <div className="flex-1 flex items-center justify-center relative">
+          <div className="flex-1 min-h-0 flex items-center justify-center relative overflow-hidden px-12"
+            onTouchStart={e => { touchHeroX.current = e.touches[0].clientX }}
+            onTouchEnd={e => {
+              const dx = touchHeroX.current - e.changedTouches[0].clientX
+              if (Math.abs(dx) < 50) return
+              e.stopPropagation()
+              if (dx > 0) setFotoIdx(i => (i + 1) % fotos.length)
+              else setFotoIdx(i => (i - 1 + fotos.length) % fotos.length)
+            }}
+          >
             {fotos.length > 1 && (
               <>
                 <button onClick={e => { e.stopPropagation(); setFotoIdx(i => (i - 1 + fotos.length) % fotos.length) }}
-                  className="absolute left-2 sm:left-4 w-10 h-10 flex items-center justify-center rounded-full text-white/70 hover:text-white transition-colors"
+                  className="absolute left-2 sm:left-4 w-10 h-10 flex items-center justify-center rounded-full text-white/70 hover:text-white transition-colors z-10"
                   style={{ background: 'rgba(255,255,255,0.08)' }}>
                   <ChevronLeft size={22} />
                 </button>
                 <button onClick={e => { e.stopPropagation(); setFotoIdx(i => (i + 1) % fotos.length) }}
-                  className="absolute right-2 sm:right-4 w-10 h-10 flex items-center justify-center rounded-full text-white/70 hover:text-white transition-colors"
+                  className="absolute right-2 sm:right-4 w-10 h-10 flex items-center justify-center rounded-full text-white/70 hover:text-white transition-colors z-10"
                   style={{ background: 'rgba(255,255,255,0.08)' }}>
                   <ChevronRight size={22} />
                 </button>
               </>
             )}
             <img src={fotos[fotoIdx].url} alt=""
-              className="max-w-full max-h-full object-contain"
-              onClick={e => e.stopPropagation()} />
+              className="w-full h-full object-contain" />
           </div>
 
           {/* Strip de thumbnails */}

@@ -36,9 +36,10 @@ CREATE TABLE propiedades (
   ubicacion       TEXT,                            -- descripción textual ej: "Guatapé, Antioquia"
   latitud         NUMERIC(9,6),                   -- coordenada para mapa
   longitud        NUMERIC(9,6),
-  precio_noche    NUMERIC(12,2),
-  precio_semana   NUMERIC(12,2),
-  precio_mes      NUMERIC(12,2),
+  precio_noche          NUMERIC(12,2),
+  precio_semana         NUMERIC(12,2),
+  precio_mes            NUMERIC(12,2),
+  precio_persona_extra  NUMERIC(12,2),
   capacidad       INT,                             -- personas máximas
   habitaciones    INT,
   banos           INT,
@@ -195,8 +196,6 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mostrar_instagram  BOOLEAN NOT NULL
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mostrar_facebook   BOOLEAN NOT NULL DEFAULT true;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS mostrar_tiktok     BOOLEAN NOT NULL DEFAULT true;
 
--- Eliminar whatsapp por propiedad (se usa el teléfono de empresa)
-ALTER TABLE propiedades DROP COLUMN IF EXISTS whatsapp;
 
 -- ────────────────────────────────────────────────────────────
 -- GASTOS

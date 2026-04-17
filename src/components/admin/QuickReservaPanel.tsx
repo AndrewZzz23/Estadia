@@ -127,13 +127,12 @@ export default function QuickReservaPanel({ open, onClose, fechaInicio, propieda
       ${open ? 'translate-y-0 sm:translate-x-0 transition-transform duration-300' : 'translate-y-full sm:translate-y-0 sm:translate-x-full pointer-events-none'}`}
       style={sheetStyle}
     >
-      {/* Drag handle — solo móvil */}
-      <div className="sm:hidden flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing" {...handleProps}>
-        <div className="w-10 h-1 bg-gray-200 rounded-full" />
-      </div>
-
-      {/* Header */}
-      <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-gray-100">
+      {/* Drag zone — handle + header */}
+      <div className="flex-shrink-0 cursor-grab active:cursor-grabbing sm:cursor-default" {...handleProps}>
+        <div className="sm:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-gray-200 rounded-full" />
+        </div>
+        <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-gray-100">
         <div>
           <h2 className="text-base font-bold text-[#1E3E50]">Nueva reserva</h2>
           {fechaLabel && <p className="text-xs text-gray-400 capitalize mt-0.5">{fechaLabel}</p>}
@@ -141,6 +140,7 @@ export default function QuickReservaPanel({ open, onClose, fechaInicio, propieda
         <button onClick={onClose} className="text-gray-300 hover:text-gray-500 p-1 -mt-0.5 -mr-1 transition-colors">
           <X size={18} />
         </button>
+        </div>
       </div>
 
       {/* Form */}

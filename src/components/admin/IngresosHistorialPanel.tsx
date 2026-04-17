@@ -92,10 +92,11 @@ export default function IngresosHistorialPanel({ open, onClose }: Props) {
       style={{ background: '#fff', ...sheetStyle }}
     >
       {/* ── Hero header ── */}
-      <div className="flex-shrink-0 px-5 pt-5 pb-6" style={{ background: CARD_GRADIENT, boxShadow: CARD_SHADOW }}>
+      <div className="flex-shrink-0 px-5 pt-5 pb-6 cursor-grab active:cursor-grabbing sm:cursor-default"
+        style={{ background: CARD_GRADIENT, boxShadow: CARD_SHADOW }} {...handleProps}>
 
         {/* Drag handle — solo móvil */}
-        <div className="sm:hidden flex justify-center mb-4 -mt-2 cursor-grab active:cursor-grabbing" {...handleProps}>
+        <div className="sm:hidden flex justify-center mb-4 -mt-2">
           <div className="w-10 h-1 rounded-full bg-white/40" />
         </div>
 

@@ -10,6 +10,11 @@
 -- ============================================================
 
 -- ────────────────────────────────────────────────────────────
+-- MIGRACIONES (ejecutar en Supabase SQL Editor si la tabla ya existe)
+-- ────────────────────────────────────────────────────────────
+ALTER TABLE propiedades ADD COLUMN IF NOT EXISTS precio_persona_extra NUMERIC(12,2);
+
+-- ────────────────────────────────────────────────────────────
 -- TENANTS
 -- ────────────────────────────────────────────────────────────
 ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;

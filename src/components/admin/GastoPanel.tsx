@@ -78,20 +78,20 @@ export default function GastoPanel({ open, onClose, onCreated }: Props) {
         : 'translate-y-full sm:translate-y-0 sm:translate-x-full pointer-events-none'}`}
       style={sheetStyle}
     >
-      {/* Drag handle — solo móvil */}
-      <div className="sm:hidden flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing" {...handleProps}>
-        <div className="w-10 h-1 bg-gray-200 rounded-full" />
-      </div>
-
-      {/* Header */}
-      <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-gray-100">
-        <div>
-          <h2 className="text-base font-bold text-[#1E3E50]">Registrar gasto</h2>
-          <p className="text-xs text-gray-400 mt-0.5">Costos operativos de la propiedad</p>
+      {/* Drag zone — handle + header */}
+      <div className="flex-shrink-0 cursor-grab active:cursor-grabbing sm:cursor-default" {...handleProps}>
+        <div className="sm:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-gray-200 rounded-full" />
         </div>
-        <button onClick={onClose} className="text-gray-300 hover:text-gray-500 p-1 -mt-0.5 -mr-1 transition-colors">
-          <X size={18} />
-        </button>
+        <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-gray-100">
+          <div>
+            <h2 className="text-base font-bold text-[#1E3E50]">Registrar gasto</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Costos operativos de la propiedad</p>
+          </div>
+          <button onClick={onClose} className="text-gray-300 hover:text-gray-500 p-1 -mt-0.5 -mr-1 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
