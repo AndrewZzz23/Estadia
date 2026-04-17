@@ -62,15 +62,16 @@ export default function PropiedadDetalle() {
   }, [])
 
   useEffect(() => {
-    if (!lightboxOpen) return
+    if (!lightboxOpen || !propiedad) return
+    const len = (propiedad as { fotos_propiedades: unknown[] }).fotos_propiedades.length
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') setFotoIdx(i => (i + 1) % fotos.length)
-      else if (e.key === 'ArrowLeft') setFotoIdx(i => (i - 1 + fotos.length) % fotos.length)
+      if (e.key === 'ArrowRight') setFotoIdx(i => (i + 1) % len)
+      else if (e.key === 'ArrowLeft') setFotoIdx(i => (i - 1 + len) % len)
       else if (e.key === 'Escape') setLightboxOpen(false)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [lightboxOpen, fotos.length])
+  }, [lightboxOpen, propiedad])
 
   useEffect(() => {
     async function cargar() {
