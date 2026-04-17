@@ -46,7 +46,7 @@ export default function PropiedadDetalle() {
 
   const touchHeroX  = useRef<number>(0)
   const carouselRef = useRef<HTMLDivElement>(null)
-  const scrollTimer   = useRef<ReturnType<typeof setTimeout>>()
+  const scrollTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ctaRef        = useRef<HTMLDivElement>(null)
   const [ctaVisible, setCtaVisible] = useState(false)
 
