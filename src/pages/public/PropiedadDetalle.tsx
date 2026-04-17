@@ -396,6 +396,21 @@ export default function PropiedadDetalle() {
                     </div>
                   )}
                 </div>
+                {p.precio_persona_extra && (
+                  <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-xl flex items-center justify-center"
+                        style={{ background: 'rgba(42,122,104,0.10)' }}>
+                        <Users size={13} className="text-[#2A7A68]" />
+                      </div>
+                      <p className="text-[13px] text-gray-500">Persona adicional</p>
+                    </div>
+                    <p className="text-sm font-semibold text-[#1E3E50]">
+                      +${p.precio_persona_extra.toLocaleString('es-CO')}
+                      <span className="text-[11px] font-normal text-gray-400"> / noche</span>
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -774,7 +789,8 @@ export default function PropiedadDetalle() {
               </>
             )}
             <img src={fotos[fotoIdx].url} alt=""
-              className="w-full h-full object-contain" />
+              className="max-w-full max-h-full object-contain"
+              onClick={e => e.stopPropagation()} />
           </div>
 
           {/* Strip de thumbnails */}
