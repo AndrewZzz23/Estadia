@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
-import type { Propiedad } from '../../types/database'
+import type { Propiedad, Reserva } from '../../types/database'
 import { X } from 'lucide-react'
 import { navyGlassStyle } from '../../lib/styles'
 import { useSheetDrag } from '../../hooks/useSheetDrag'
@@ -28,21 +28,31 @@ function today() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function fmtCorto(f: string) {
+  return new Date(f + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })
+}
+
 interface Props {
   open: boolean
   onClose: () => void
   fechaInicio?: string
   propiedadDefault?: string
-  onCreated: () => void
+  /** Si viene, el panel edita esa reserva en vez de crear una nueva. */
+  reservaId?: string | null
+  onSaved: () => void
 }
 
-export default function QuickReservaPanel({ open, onClose, fechaInicio, propiedadDefault = '', onCreated }: Props) {
+export default function QuickReservaPanel({ open, onClose, fechaInicio, propiedadDefault = '', reservaId = null, onSaved }: Props) {
   const { tenant } = useTenant()
   const { handleProps, sheetStyle } = useSheetDrag(open, onClose)
   const [propiedades, setPropiedades] = useState<Pick<Propiedad, 'id' | 'nombre'>[]>([])
   const [form, setForm]           = useState<QuickForm>(emptyForm())
   const [guardando, setGuardando] = useState(false)
   const [error, setError]         = useState('')
+  const [cargadoId, setCargadoId] = useState<string | null>(null)
+
+  const editando = !!reservaId
+  const cargando = editando && cargadoId !== reservaId
 
   function emptyForm(): QuickForm {
     const inicio = fechaInicio || today()
@@ -65,14 +75,35 @@ export default function QuickReservaPanel({ open, onClose, fechaInicio, propieda
       .then(({ data }) => setPropiedades((data as Pick<Propiedad, 'id' | 'nombre'>[]) ?? []))
   }, [tenant])
 
-  // Reset form al abrir
+  // Al abrir: formulario en blanco para crear, o los datos de la reserva para editar
   useEffect(() => {
-    if (open) {
+    if (!open) return
+    setError('')
+    if (!reservaId) {
       setForm(emptyForm())
-      setError('')
+      setCargadoId(null)
+      return
     }
+    let vigente = true
+    supabase.from('reservas').select('*').eq('id', reservaId).single()
+      .then(({ data }) => {
+        if (!vigente || !data) return
+        const r = data as unknown as Reserva
+        setForm({
+          propiedad_id:   r.propiedad_id,
+          cliente_nombre: r.cliente_nombre,
+          cliente_tel:    r.cliente_tel,
+          fecha_inicio:   r.fecha_inicio,
+          fecha_fin:      r.fecha_fin,
+          monto_total:    r.monto_total != null ? String(r.monto_total) : '',
+          estado:         r.estado,
+          notas:          r.notas ?? '',
+        })
+        setCargadoId(reservaId)
+      })
+    return () => { vigente = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, fechaInicio, propiedadDefault])
+  }, [open, reservaId, fechaInicio, propiedadDefault])
 
   function set(field: keyof QuickForm, val: string) {
     setForm(prev => {
@@ -99,26 +130,32 @@ export default function QuickReservaPanel({ open, onClose, fechaInicio, propieda
     if (form.fecha_fin <= form.fecha_inicio)   { setError('La salida debe ser posterior a la entrada'); return }
 
     setGuardando(true); setError('')
-    const { error: err } = await supabase.from('reservas').insert({
+
+    // cliente_email no está en este formulario: al editar se deja como esté.
+    const campos = {
       propiedad_id:   form.propiedad_id,
       cliente_nombre: form.cliente_nombre.trim(),
       cliente_tel:    form.cliente_tel.trim(),
-      cliente_email:  null,
       fecha_inicio:   form.fecha_inicio,
       fecha_fin:      form.fecha_fin,
       monto_total:    form.monto_total ? parseFloat(form.monto_total) : null,
       estado:         form.estado,
       notas:          form.notas.trim() || null,
-    } as never)
+    }
+
+    const { error: err } = reservaId
+      ? await supabase.from('reservas').update(campos as never).eq('id', reservaId)
+      : await supabase.from('reservas').insert({ ...campos, cliente_email: null } as never)
+
     setGuardando(false)
     if (err) { setError('Error al guardar'); return }
-    onCreated()
+    onSaved()
   }
 
   const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-[#2A7A68]/30 bg-white'
-  const fechaLabel = (fechaInicio || today())
-    ? new Date((fechaInicio || today()) + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
-    : ''
+  const fechaLabel = editando
+    ? (cargando ? 'Cargando…' : `${fmtCorto(form.fecha_inicio)} → ${fmtCorto(form.fecha_fin)}`)
+    : new Date((fechaInicio || today()) + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
     <div className={`fixed z-50 bg-white shadow-2xl ease-out
@@ -134,7 +171,7 @@ export default function QuickReservaPanel({ open, onClose, fechaInicio, propieda
         </div>
         <div className="flex items-start justify-between px-5 pt-4 pb-3 border-b border-gray-100">
         <div>
-          <h2 className="text-base font-bold text-[#1E3E50]">Nueva reserva</h2>
+          <h2 className="text-base font-bold text-[#1E3E50]">{editando ? 'Editar reserva' : 'Nueva reserva'}</h2>
           {fechaLabel && <p className="text-xs text-gray-400 capitalize mt-0.5">{fechaLabel}</p>}
         </div>
         <button onClick={onClose} className="text-gray-300 hover:text-gray-500 p-1 -mt-0.5 -mr-1 transition-colors">
@@ -208,10 +245,10 @@ export default function QuickReservaPanel({ open, onClose, fechaInicio, propieda
         {error && <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
 
         <div className="flex gap-2 pt-1 pb-safe">
-          <button type="submit" disabled={guardando}
+          <button type="submit" disabled={guardando || cargando}
             className="flex-1 py-3 rounded-xl text-sm transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
             style={navyGlassStyle}>
-            {guardando ? 'Guardando...' : 'Crear reserva'}
+            {guardando ? 'Guardando...' : editando ? 'Guardar cambios' : 'Crear reserva'}
           </button>
         </div>
       </form>

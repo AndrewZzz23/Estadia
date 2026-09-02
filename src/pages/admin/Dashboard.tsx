@@ -88,7 +88,10 @@ export default function Dashboard() {
     if (!tenant) return
     async function cargar() {
       const hoy      = new Date().toISOString().split('T')[0]
-      const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+      // El mes se acota por ambos extremos: cuenta lo que ocurre en el mes, no lo que se registró.
+      const ahora     = new Date()
+      const inicioMes = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-01`
+      const finMes    = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).toISOString().slice(0, 10)
 
       const props = await getPropiedadIds(tenant!.id)
       const ids   = props.map(p => p.id)
@@ -112,11 +115,12 @@ export default function Dashboard() {
       ] = await Promise.all([
         supabase.from('propiedades').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant!.id).eq('activa', true),
         supabase.from('reservas').select('*', { count: 'exact', head: true }).in('propiedad_id', ids).eq('estado', 'confirmada').gte('fecha_fin', hoy),
-        supabase.from('reservas').select('monto_total').in('propiedad_id', ids).in('estado', ['confirmada', 'completada']).gte('created_at', inicioMes),
+        supabase.from('reservas').select('monto_total').in('propiedad_id', ids).in('estado', ['confirmada', 'completada'])
+          .gte('fecha_inicio', inicioMes).lte('fecha_inicio', finMes),
         supabase.from('reservas').select('id, cliente_nombre, fecha_inicio, fecha_fin, noches, monto_total, propiedad_id')
           .in('propiedad_id', ids).eq('estado', 'confirmada').gte('fecha_fin', hoy)
           .order('fecha_inicio').limit(5),
-        supabase.from('gastos').select('monto').eq('tenant_id', tenant!.id).gte('fecha', inicioMes),
+        supabase.from('gastos').select('monto').eq('tenant_id', tenant!.id).gte('fecha', inicioMes).lte('fecha', finMes),
         supabase.from('reservas').select('propiedad_id, fecha_inicio, fecha_fin, cliente_nombre')
           .in('propiedad_id', ids).neq('estado', 'cancelada')
           .lte('fecha_inicio', semanaFinStr).gte('fecha_fin', hoy),
@@ -337,7 +341,7 @@ export default function Dashboard() {
           <QuickReservaPanel
             open={panelOpen}
             onClose={() => setPanelOpen(false)}
-            onCreated={() => setPanelOpen(false)}
+            onSaved={() => setPanelOpen(false)}
           />
           <GastoPanel
             open={gastoOpen}

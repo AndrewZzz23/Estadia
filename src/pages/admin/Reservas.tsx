@@ -247,7 +247,7 @@ export default function Reservas() {
       <QuickReservaPanel
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
-        onCreated={() => { setPanelOpen(false); cargar() }}
+        onSaved={() => { setPanelOpen(false); cargar() }}
       />
     </div>
   )

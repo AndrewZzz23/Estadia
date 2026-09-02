@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useTenant } from '../../contexts/TenantContext'
 import type { Bloqueo, Propiedad, Reserva } from '../../types/database'
@@ -7,19 +6,41 @@ import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import airbnbLogo from '../../assets/airbnb.png'
 import { getFestivos } from '../../lib/festivos'
 import QuickReservaPanel from '../../components/admin/QuickReservaPanel'
+import ReservaDetallePanel from '../../components/admin/ReservaDetallePanel'
 
 const COLORES = [
-  { bg: 'bg-[#2A7A68]',  text: 'text-white' },
-  { bg: 'bg-[#C4693A]',  text: 'text-white' },
-  { bg: 'bg-[#1E3E50]',  text: 'text-white' },
-  { bg: 'bg-violet-500', text: 'text-white' },
-  { bg: 'bg-amber-400',  text: 'text-amber-900' },
+  { bg: 'bg-[#2A7A68]',  text: 'text-white',     hex: '#2A7A68' },
+  { bg: 'bg-[#C4693A]',  text: 'text-white',     hex: '#C4693A' },
+  { bg: 'bg-[#1E3E50]',  text: 'text-white',     hex: '#1E3E50' },
+  { bg: 'bg-violet-500', text: 'text-white',     hex: '#8B5CF6' },
+  { bg: 'bg-amber-400',  text: 'text-amber-900', hex: '#FBBF24' },
 ]
+
+const AIRBNB_HEX = '#FF5A5F'
+const GRIS_HEX   = '#9CA3AF'
 
 const DIAS  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
 function ymd(d: Date) { return d.toISOString().slice(0, 10) }
+
+// Celdas visibles de la grilla: mínimo 5 semanas completas, 6 si el mes lo necesita.
+// La usan tanto el render como la consulta, para que nunca se pinte un día sin datos.
+function construirGrid(year: number, month: number) {
+  const inicioGrid = new Date(year, month, 1)
+  inicioGrid.setDate(inicioGrid.getDate() - inicioGrid.getDay())
+
+  const dias: Date[] = []
+  const cur = new Date(inicioGrid)
+  while (dias.length < 35 || cur.getMonth() === month) {
+    dias.push(new Date(cur))
+    cur.setDate(cur.getDate() + 1)
+    if (dias.length >= 42) break
+  }
+  while (dias.length % 7 !== 0) { dias.push(new Date(cur)); cur.setDate(cur.getDate() + 1) }
+  return dias
+}
+
 function toDate(s: string) { return new Date(s + 'T00:00:00') }
 
 interface Evento {
@@ -50,9 +71,25 @@ export default function Calendario() {
   const [dayModal, setDayModal]   = useState<string | null>(null)
   const [quickOpen, setQuickOpen] = useState(false)
   const [quickFecha, setQuickFecha] = useState('')
+  const [quickReservaId, setQuickReservaId] = useState<string | null>(null)
+  const [reservaDetalle, setReservaDetalle] = useState<string | null>(null)
+
+  function abrirReserva(id: string) {
+    setTooltip(null)
+    setDayModal(null)
+    setReservaDetalle(id)
+  }
+
+  // Editar sin salir del calendario: reusa el mismo sheet que crea reservas.
+  function editarReserva(id: string) {
+    setReservaDetalle(null)
+    setQuickReservaId(id)
+    setQuickOpen(true)
+  }
 
   function abrirQuick(fecha: string) {
     setDayModal(null)
+    setQuickReservaId(null)
     setQuickFecha(fecha)
     setQuickOpen(true)
   }
@@ -76,10 +113,7 @@ export default function Calendario() {
     if (esPrimeraCarga) setLoading(true)
     else setLoadingMes(true)
 
-    const primerDia = new Date(year, month, 1)
-    const ultimoDia = new Date(year, month + 1, 0)
-    const inicio = new Date(primerDia); inicio.setDate(inicio.getDate() - inicio.getDay())
-    const fin    = new Date(ultimoDia); fin.setDate(fin.getDate() + (6 - fin.getDay()))
+    const grid = construirGrid(year, month)
 
     const { data: props } = await supabase
       .from('propiedades').select('id, nombre')
@@ -93,8 +127,8 @@ export default function Calendario() {
     const colorMap: Record<string, number> = {}
     lista.forEach((p, i) => { colorMap[p.id] = i % COLORES.length })
 
-    const desde = ymd(inicio)
-    const hasta = ymd(fin)
+    const desde = ymd(grid[0])
+    const hasta = ymd(grid[grid.length - 1])
 
     const [{ data: reservas }, { data: bloqueos }] = await Promise.all([
       supabase.from('reservas')
@@ -126,25 +160,22 @@ export default function Calendario() {
     setLoadingMes(false)
   }
 
-  const primerDiaMes = new Date(year, month, 1)
-  const inicioGrid   = new Date(primerDiaMes)
-  inicioGrid.setDate(inicioGrid.getDate() - inicioGrid.getDay())
+  const dias = construirGrid(year, month)
 
-  const dias: Date[] = []
-  const cur = new Date(inicioGrid)
-  while (dias.length < 35 || cur.getMonth() === month) {
-    dias.push(new Date(cur))
-    cur.setDate(cur.getDate() + 1)
-    if (dias.length >= 42) break
+  const pasaFiltro = (ev: Evento) => filtroProp === 'todas' || ev.propiedad_id === filtroProp
+
+  // Noches ocupadas: fecha_fin es el día de check-out y no se ocupa.
+  function eventosEnFecha(d: string) {
+    return eventos.filter(ev => pasaFiltro(ev) && ev.fecha_inicio <= d && ev.fecha_fin > d)
   }
-  while (dias.length % 7 !== 0) { dias.push(new Date(cur)); cur.setDate(cur.getDate() + 1) }
+
+  // Día de check-out: se marca de forma discreta pero sigue disponible para una nueva entrada.
+  function salidasEnFecha(d: string) {
+    return eventos.filter(ev => pasaFiltro(ev) && ev.fecha_fin === d)
+  }
 
   function eventosDelDia(dia: Date) {
-    const d = ymd(dia)
-    return eventos.filter(ev => {
-      if (filtroProp !== 'todas' && ev.propiedad_id !== filtroProp) return false
-      return ev.fecha_inicio <= d && ev.fecha_fin > d
-    })
+    return eventosEnFecha(ymd(dia))
   }
 
   function navMes(delta: number) {
@@ -425,6 +456,11 @@ export default function Calendario() {
                 const dStr    = ymd(dia)
                 const festivo = festivos.get(dStr)
                 const evs     = eventosDelDia(dia)
+                const salidas = salidasEnFecha(dStr)
+                const items   = [
+                  ...evs.map(ev => ({ ev, salida: false })),
+                  ...salidas.map(ev => ({ ev, salida: true })),
+                ]
 
                 const esFestivoActivo = festivoActivo === dStr
                 return (
@@ -434,11 +470,11 @@ export default function Calendario() {
                       if (evs.length > 0) { setTooltip(null); setDayModal(dStr) }
                       else abrirQuick(dStr)
                     }}
-                    onMouseEnter={evs.length > 0 ? (e) => {
+                    onMouseEnter={items.length > 0 ? (e) => {
                       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                       setTooltip({ day: dStr, x: rect.left, y: rect.top })
                     } : undefined}
-                    onMouseLeave={evs.length > 0 ? () => setTooltip(null) : undefined}
+                    onMouseLeave={items.length > 0 ? () => setTooltip(null) : undefined}
                     className={`p-1 sm:p-2 h-[80px] sm:h-[90px] overflow-hidden transition-all duration-300 cursor-pointer
                       ${esFestivoActivo ? 'bg-amber-100' : !esMes ? 'bg-gray-50/60' : esFinde && !festivo ? 'bg-gray-50/40' : !festivo ? 'bg-white' : ''}`}
                     style={
@@ -489,11 +525,32 @@ export default function Calendario() {
 
                     {/* Eventos */}
                     <div className="space-y-0.5">
-                      {evs.slice(0, 2).map((ev, evIdx) => {
+                      {items.slice(0, 2).map(({ ev, salida }, evIdx) => {
                         const color    = COLORES[ev.colorIdx]
-                        const esInicio = ymd(dia) === ev.fecha_inicio
+                        const esInicio = dStr === ev.fecha_inicio
                         const esAirbnb = ev.tipo === 'bloqueo' && !!ev.ical_uid
                         const propNombre = propiedades.find(p => p.id === ev.propiedad_id)?.nombre ?? ''
+
+                        // Check-out: media barra con el color de la reserva. El día sigue libre para entrar.
+                        if (salida) {
+                          const acento = esAirbnb ? AIRBNB_HEX : ev.tipo === 'bloqueo' ? GRIS_HEX : color.hex
+                          return (
+                            <div
+                              key={`out-${ev.id}`}
+                              className={`w-full text-left text-[9px] sm:text-[10px] pr-1 sm:pr-1.5 py-px sm:py-0.5 rounded-md truncate leading-[14px] sm:leading-4 text-gray-500
+                                ${evIdx === 1 ? 'hidden sm:block' : ''}`}
+                              style={{
+                                background: `linear-gradient(90deg, ${acento}24 0%, transparent 75%)`,
+                                borderLeft: `3px solid ${acento}`,
+                                paddingLeft: 4,
+                              }}
+                              title={`Salida · ${esAirbnb ? propNombre : ev.label}`}
+                            >
+                              ↳ {esAirbnb ? propNombre : ev.label}
+                            </div>
+                          )
+                        }
+
                         return (
                           <div
                             key={ev.id}
@@ -519,15 +576,15 @@ export default function Calendario() {
                         )
                       })}
                       {/* móvil: +N si hay más de 1 */}
-                      {evs.length > 1 && (
+                      {items.length > 1 && (
                         <span className="sm:hidden text-[9px] text-gray-400 px-1 font-medium">
-                          +{evs.length - 1} más
+                          +{items.length - 1} más
                         </span>
                       )}
                       {/* desktop: +N si hay más de 2 */}
-                      {evs.length > 2 && (
+                      {items.length > 2 && (
                         <span className="hidden sm:inline text-[9px] text-gray-400 px-1.5 font-medium">
-                          +{evs.length - 2} más
+                          +{items.length - 2} más
                         </span>
                       )}
                     </div>
@@ -572,10 +629,8 @@ export default function Calendario() {
 
       {/* ── Modal día ocupado ── */}
       {dayModal && (() => {
-        const evsDia = eventos.filter(ev => {
-          if (filtroProp !== 'todas' && ev.propiedad_id !== filtroProp) return false
-          return ev.fecha_inicio <= dayModal && ev.fecha_fin > dayModal
-        })
+        const evsDia  = eventosEnFecha(dayModal)
+        const salidas = salidasEnFecha(dayModal)
         const fecha = toDate(dayModal)
         const fechaLabel = fecha.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
         return (
@@ -606,7 +661,8 @@ export default function Calendario() {
                   return (
                     <div
                       key={ev.id}
-                      className="flex items-center gap-3 p-3 rounded-xl"
+                      onClick={ev.tipo === 'reserva' ? () => abrirReserva(ev.id) : undefined}
+                      className={`flex items-center gap-3 p-3 rounded-xl ${ev.tipo === 'reserva' ? 'cursor-pointer transition-colors hover:brightness-95' : ''}`}
                       style={{
                         background: 'rgba(0,0,0,0.03)',
                         border: '1px solid rgba(0,0,0,0.05)',
@@ -624,18 +680,40 @@ export default function Calendario() {
                         <p className="text-xs text-gray-400">{prop?.nombre ?? '—'} · {ev.ical_uid ? 'Airbnb' : ev.tipo === 'bloqueo' ? 'Bloqueo' : 'Reserva'}</p>
                       </div>
                       {ev.tipo === 'reserva' && (
-                        <Link
-                          to={`/admin/reservas/${ev.id}/editar`}
-                          onClick={() => setDayModal(null)}
+                        <button
+                          onClick={e => { e.stopPropagation(); abrirReserva(ev.id) }}
                           className="text-xs font-medium px-2.5 py-1 rounded-lg flex-shrink-0 transition-colors hover:brightness-110"
                           style={{ backgroundColor: '#1E3E50', color: 'white' }}
                         >
                           Ver
-                        </Link>
+                        </button>
                       )}
                     </div>
                   )
                 })}
+                {salidas.length > 0 && (
+                  <div className="pt-1 space-y-1.5">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Salidas de este día</p>
+                    {salidas.map(ev => {
+                      const color = COLORES[ev.colorIdx]
+                      const prop  = propiedades.find(p => p.id === ev.propiedad_id)
+                      return (
+                        <div
+                          key={`out-${ev.id}`}
+                          onClick={ev.tipo === 'reserva' ? () => abrirReserva(ev.id) : undefined}
+                          className={`flex items-center gap-3 px-3 py-2 rounded-xl ${ev.tipo === 'reserva' ? 'cursor-pointer transition-colors hover:brightness-95' : ''}`}
+                          style={{ background: 'rgba(0,0,0,0.02)', border: '1px dashed rgba(0,0,0,0.09)' }}
+                        >
+                          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 opacity-60 ${ev.tipo === 'bloqueo' ? 'bg-gray-300' : color.bg}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-600 truncate">{ev.ical_uid ? prop?.nombre ?? ev.label : ev.label}</p>
+                            <p className="text-xs text-gray-400">{prop?.nombre ?? '—'} · sale este día, queda libre</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Footer — crear reserva */}
@@ -660,7 +738,18 @@ export default function Calendario() {
 
       </div>{/* fin max-w-5xl */}
 
-      {/* ── Quick Reserva Panel ── */}
+      {/* ── Detalle de reserva ── */}
+      {reservaDetalle && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={() => setReservaDetalle(null)} />
+      )}
+      <ReservaDetallePanel
+        open={!!reservaDetalle}
+        reservaId={reservaDetalle}
+        onClose={() => setReservaDetalle(null)}
+        onEditar={editarReserva}
+      />
+
+      {/* ── Quick Reserva Panel — crea o edita ── */}
       {quickOpen && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={() => setQuickOpen(false)} />
       )}
@@ -669,16 +758,17 @@ export default function Calendario() {
         onClose={() => setQuickOpen(false)}
         fechaInicio={quickFecha}
         propiedadDefault={filtroProp !== 'todas' ? filtroProp : ''}
-        onCreated={() => { setQuickOpen(false); cargar() }}
+        reservaId={quickReservaId}
+        onSaved={() => { setQuickOpen(false); cargar() }}
       />
 
       {/* ── Tooltip hover día ── */}
       {tooltip && (() => {
-        const evsDia = eventos.filter(ev => {
-          if (filtroProp !== 'todas' && ev.propiedad_id !== filtroProp) return false
-          return ev.fecha_inicio <= tooltip.day && ev.fecha_fin > tooltip.day
-        })
-        if (!evsDia.length) return null
+        const filas = [
+          ...eventosEnFecha(tooltip.day).map(ev => ({ ev, salida: false })),
+          ...salidasEnFecha(tooltip.day).map(ev => ({ ev, salida: true })),
+        ]
+        if (!filas.length) return null
         return (
           <div
             className="fixed z-[60] pointer-events-none"
@@ -697,10 +787,10 @@ export default function Calendario() {
                 {toDate(tooltip.day).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
               </p>
               <div className="space-y-1">
-                {evsDia.map(ev => {
+                {filas.map(({ ev, salida }) => {
                   const color = COLORES[ev.colorIdx]
                   return (
-                    <div key={ev.id} className="flex items-center gap-2">
+                    <div key={`${salida ? 'out' : 'in'}-${ev.id}`} className={`flex items-center gap-2 ${salida ? 'opacity-60' : ''}`}>
                       {ev.ical_uid ? (
                         <img src={airbnbLogo} alt="Airbnb" className="w-2.5 h-2.5 flex-shrink-0" />
                       ) : (
@@ -708,7 +798,7 @@ export default function Calendario() {
                       )}
                       <span className="text-[11px] text-gray-700 truncate">{ev.ical_uid ? (propiedades.find(p => p.id === ev.propiedad_id)?.nombre ?? ev.label) : ev.label}</span>
                       <span className="text-[10px] text-gray-400 ml-auto flex-shrink-0">
-                        {propiedades.find(p => p.id === ev.propiedad_id)?.nombre?.split(' ')[0] ?? ''}
+                        {salida ? 'salida' : propiedades.find(p => p.id === ev.propiedad_id)?.nombre?.split(' ')[0] ?? ''}
                       </span>
                     </div>
                   )
