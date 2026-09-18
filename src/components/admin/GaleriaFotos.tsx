@@ -13,6 +13,7 @@ export default function GaleriaFotos({ propiedadId }: Props) {
   const [subiendo, setSubiendo] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [confirmFoto, setConfirmFoto] = useState<FotoPropiedad | null>(null)
+  const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   async function cargarFotos() {
@@ -62,15 +63,22 @@ export default function GaleriaFotos({ propiedadId }: Props) {
   }
 
   async function eliminarFoto(foto: FotoPropiedad) {
+    setConfirmFoto(null)
+    setError('')
+
+    // El registro manda: si el DELETE falla (p. ej. RLS) no se toca la UI.
+    const { error: delError } = await supabase.from('fotos_propiedades').delete().eq('id', foto.id)
+    if (delError) { setError(`No se pudo eliminar la foto: ${delError.message}`); return }
+
     await supabase.storage.from('fotos-propiedades').remove([foto.storage_path])
-    await supabase.from('fotos_propiedades').delete().eq('id', foto.id)
-    const restantes = fotos.filter(f => f.id !== foto.id)
+
+    let restantes = fotos.filter(f => f.id !== foto.id)
     if (foto.es_principal && restantes.length > 0) {
-      await supabase.from('fotos_propiedades').update({ es_principal: true } as never).eq('id', restantes[0].id)
-      restantes[0].es_principal = true
+      const nuevaPortada = restantes[0].id
+      await supabase.from('fotos_propiedades').update({ es_principal: true } as never).eq('id', nuevaPortada)
+      restantes = restantes.map(f => ({ ...f, es_principal: f.id === nuevaPortada }))
     }
     setFotos(restantes)
-    setConfirmFoto(null)
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -119,6 +127,8 @@ export default function GaleriaFotos({ propiedadId }: Props) {
         )}
       </div>
 
+      {error && <p className="text-xs text-red-500 bg-red-50 px-4 py-2.5 rounded-xl">{error}</p>}
+
       {/* ── Galería ── */}
       {fotos.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -140,6 +150,7 @@ export default function GaleriaFotos({ propiedadId }: Props) {
 
                 {!foto.es_principal && (
                   <button
+                    type="button"
                     onClick={() => marcarPrincipal(foto.id)}
                     className="flex items-center justify-center w-8 h-8 rounded-xl bg-white/20 hover:bg-[#2A7A68] backdrop-blur-sm text-white transition-all"
                     title="Marcar como portada"
@@ -149,6 +160,7 @@ export default function GaleriaFotos({ propiedadId }: Props) {
                 )}
 
                 <button
+                  type="button"
                   onClick={() => setConfirmFoto(foto)}
                   className="flex items-center justify-center w-8 h-8 rounded-xl bg-white/20 hover:bg-red-500 backdrop-blur-sm text-white transition-all"
                   title="Eliminar"

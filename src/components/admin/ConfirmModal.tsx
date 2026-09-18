@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { Trash2 } from 'lucide-react'
 
 interface Props {
@@ -11,8 +12,10 @@ interface Props {
 export default function ConfirmModal({ open, titulo = '¿Eliminar?', mensaje, onConfirm, onCancel }: Props) {
   if (!open) return null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+  // Portal a <body>: dentro de un panel con transform, ese panel pasa a ser el
+  // containing block del position:fixed y el overlay queda recortado al panel.
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4"
       onClick={onCancel}>
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
@@ -38,12 +41,14 @@ export default function ConfirmModal({ open, titulo = '¿Eliminar?', mensaje, on
         {/* Botones */}
         <div className="grid grid-cols-2 border-t border-gray-100">
           <button
+            type="button"
             onClick={onCancel}
             className="py-4 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors border-r border-gray-100"
           >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             className="py-4 text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors"
           >
@@ -51,6 +56,7 @@ export default function ConfirmModal({ open, titulo = '¿Eliminar?', mensaje, on
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
